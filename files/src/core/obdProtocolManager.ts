@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import { ELM327Commander } from './elm327Commander';
 import { PID_MAP, POLLING_FAST, POLLING_NORMAL, POLLING_SLOW } from './pidCatalog';
-import { DTC_CATALOG } from './dtcCatalog.generated';
+import { lookupDTC } from './dtcLookup';
 import { parseDTCResponse, parsePIDData, parsePIDMessages } from './obdParsers';
 import { PIDReading, DTCCode, DTCType, DTCStatus, LogLevel } from '../shared/types';
 
@@ -309,21 +309,21 @@ export class OBDProtocolManager extends EventEmitter {
     this.emit('log', { timestamp: Date.now(), level, message: msg });
   }
 
-  // ── Catalog lookups — backed by dtcCatalog.generated.ts ─────────────────────
+  // ── Catalog lookups — curated catalog, then OBDex generic codes ─────────────
   private getDTCDescription(code: string): string {
-    return DTC_CATALOG[code]?.description ?? `${code} — refer to factory service manual`;
+    return lookupDTC(code)?.description ?? `${code} — refer to factory service manual`;
   }
 
   private getDTCCauses(code: string): string[] {
-    return DTC_CATALOG[code]?.causes ?? ['Refer to factory service manual for this vehicle'];
+    return lookupDTC(code)?.causes ?? ['Refer to factory service manual for this vehicle'];
   }
 
   private getDTCRepair(code: string): string {
-    return DTC_CATALOG[code]?.repair ?? 'Refer to factory service manual and perform circuit testing per diagnostic chart.';
+    return lookupDTC(code)?.repair ?? 'Refer to factory service manual and perform circuit testing per diagnostic chart.';
   }
 
   private getDTCModule(code: string): string {
-    const explicit = DTC_CATALOG[code]?.module;
+    const explicit = lookupDTC(code)?.module;
     if (explicit) return explicit;
     if (code.startsWith('B')) return 'BCM/IPC';
     if (code.startsWith('U')) return 'Network';

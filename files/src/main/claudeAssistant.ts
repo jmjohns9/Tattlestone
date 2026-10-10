@@ -129,7 +129,7 @@ export interface SessionContext {
 
 export interface ChatTurn { role: 'user' | 'assistant'; content: string; }
 
-const SYSTEM_PROMPT = `You are the built-in diagnostic assistant inside "Project Agador Spartacus", a macOS OBD-II diagnostic app. The app connects to whatever vehicle the user plugs the adapter into — the vehicle description, if the user provided one, is included in each session snapshot.
+const SYSTEM_PROMPT = `You are the built-in diagnostic assistant inside "Tellstone", a macOS OBD-II diagnostic app. The app connects to whatever vehicle the user plugs the adapter into — the vehicle description, if the user provided one, is included in each session snapshot.
 
 You receive a live snapshot with every question: vehicle description, connection state, live PID readings, stored DTCs, and recent app logs.
 

@@ -131,6 +131,7 @@ export type ScreenId =
   | 'pcm'
   | 'logger'
   | 'freezeframes'
+  | 'recalls'
   | 'settings';
 
 export interface ChatMessage {

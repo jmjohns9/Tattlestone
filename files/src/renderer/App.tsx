@@ -4,7 +4,7 @@ import { FONTS, TYPE } from './theme/theme';
 import { Sidebar } from './components/shell/Sidebar';
 import { Toolbar } from './components/shell/Toolbar';
 import { shortcutFor, readSidebarPref, writeSidebarPref } from './components/shell/shellLogic';
-import { PIDReading, DTCCode, ModuleState, LogEntry, SessionSnapshot, DataRecording, FreezeFrame, StorageConfig, StorageInfo, ReportPayload, PcmReadResult, Appearance } from '../shared/types';
+import { PIDReading, DTCCode, ModuleState, LogEntry, SessionSnapshot, DataRecording, FreezeFrame, StorageConfig, StorageInfo, ReportPayload, PcmReadResult, Appearance, VehicleSafetyReport } from '../shared/types';
 
 // Screens
 import { ConnectionScreen }   from './screens/ConnectionScreen';
@@ -26,6 +26,7 @@ import { PcmScreen }          from './screens/PcmScreen';
 import { SettingsScreen }     from './screens/SettingsScreen';
 import { DataLoggerScreen }  from './screens/DataLoggerScreen';
 import { FreezeFrameScreen } from './screens/FreezeFrameScreen';
+import { RecallsScreen }     from './screens/RecallsScreen';
 
 const safeStorage = (): Storage | undefined => { try { return window.localStorage; } catch { return undefined; } };
 
@@ -68,6 +69,8 @@ declare global {
       onClaudeStreamChunk: (cb: (delta: string) => void) => () => void;
       onBtRSSI?: (cb: (rssi: number | null) => void) => () => void;
       decodeVIN: (vin: string) => Promise<{ year: string; make: string; model: string; engine: string; trim: string; transmission: string } | null>;
+      vehicleSafety: (vehicle: { year: string; make: string; model: string }, codes: string[], refresh?: boolean) => Promise<VehicleSafetyReport | null>;
+      openBulletin: (id: number) => Promise<boolean>;
       storage: {
         getConfig:         () => Promise<StorageConfig>;
         migrate:           (to: 'local' | 'sqlite') => Promise<boolean>;
@@ -99,7 +102,7 @@ const SCREENS: Record<ScreenId, React.ComponentType> = {
   allpids: AllPIDsScreen, engine: EngineScreen, electrical: ElectricalScreen, hvac: HVACScreen,
   transmission: TransmissionScreen, dtc: DTCScreen, modules: ModulesScreen, parasite: ParasiteScreen,
   ecubus: EcuBusScreen, pcm: PcmScreen, compare: CompareScreen, logs: LogsScreen,
-  settings: SettingsScreen, logger: DataLoggerScreen, freezeframes: FreezeFrameScreen,
+  settings: SettingsScreen, logger: DataLoggerScreen, freezeframes: FreezeFrameScreen, recalls: RecallsScreen,
 };
 
 // ─── App ──────────────────────────────────────────────────────────────────────

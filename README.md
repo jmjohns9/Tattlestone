@@ -1,8 +1,8 @@
-# Project Agador Spartacus
+# Tellstone
 
 **An OBD-II diagnostic suite for the Mac. It reads live telemetry and fault codes, analyses parasitic battery drain, and includes a Claude-powered diagnostic assistant.**
 
-![Project Agador Spartacus in light mode: the Vehicle health screen](docs/screenshots/health.png)
+![Tellstone in light mode: the Vehicle health screen](docs/screenshots/health.png)
 
 The app is built with Electron, React and TypeScript, and talks to an ELM327-class adapter over Bluetooth or USB serial. It started as a tool for chasing a parasitic battery drain on a 2004 Chevrolet Silverado 1500 Z71 (GM GMT800, J1850 VPW), and has since been generalized. The protocol layer works with any OBD-II vehicle. Platform-specific reference data (module maps, fuse panels, draw checklists) comes from a registry.
 
@@ -34,6 +34,12 @@ A built-in ELM327 simulator lets the whole app run offline, so you don't need a 
 ---
 
 ## What's new
+
+### Recalls, bulletins and a bigger code catalog
+
+- **Recalls & bulletins screen (new).** Looks up the vehicle's safety recalls, manufacturer bulletins (TSBs, GM PIs, special coverage) and owner complaints from NHTSA. Bulletins and complaints that cite a code the vehicle reported are flagged, and each bulletin's PDF opens from NHTSA. Free public-domain data, no API key.
+- **9,500+ generic fault codes.** Codes missing from the curated GMT800 catalog now fall back to [OBDex](https://github.com/foerbsnavi/OBDex) (CC0): description, likely causes ranked by likelihood, symptoms and repair effort.
+- **Offline VIN decoding.** VINs decode against a bundled copy of NHTSA's vPIC database ([corgi](https://github.com/cardog-ai/corgi)), so it works with no network. When online, the vPIC API fills in trim and transmission.
 
 ### macOS-native redesign
 
@@ -109,12 +115,17 @@ All screenshots were captured from the built-in simulator in light mode, so you 
   Commands never overlap on the serial line.
 - A 34-PID catalog with SAE J1979 decode formulas, ranges, units and plain-English descriptions.
 - Sparklines of recent history on the key metrics.
-- VIN detection and decoding, which fills in the vehicle profile automatically.
+- VIN detection and decoding, offline first, which fills in the vehicle profile automatically.
 
 **Fault codes**
-- DTC scan across all supported modes (stored, pending, permanent), backed by a generated catalog of 371 codes. The app reads codes only; it cannot clear them.
+- DTC scan across all supported modes (stored, pending, permanent). Codes are described from a curated catalog of 371 GMT800 codes, then from 9,533 generic SAE J2012 codes from OBDex. The app reads codes only; it cannot clear them.
 - Freeze-frame capture and a viewer, saved per DTC.
 - Optional CarsXE lookup for code descriptions, likely causes and repair guidance.
+
+**Recalls and bulletins (NHTSA)**
+- Safety recalls, manufacturer bulletins and owner complaints for the vehicle's year, make and model.
+- Bulletins and complaints that cite a reported code are flagged; bulletin PDFs open from NHTSA.
+- Cached for 30 minutes. NHTSA doesn't hold every service bulletin, and complaints are unverified owner reports.
 
 **Parasitic draw suite**
 - A module wake monitor. It polls known module addresses after key-off to find the one staying awake.
@@ -140,14 +151,14 @@ All screenshots were captured from the built-in simulator in light mode, so you 
 
 ## Screens and navigation
 
-There are 19 screens. The sidebar groups them like this:
+There are 20 screens. The sidebar groups them like this:
 
 | Group | Screens |
 |---|---|
 | (top) | **Connection** · **Claude assistant** |
 | Overview | **Vehicle health** · **Live telemetry** · **All parameters** · **Data logger** |
 | Subsystems | **Engine & fuel** · **Electrical** · **HVAC** · **Transmission** |
-| Diagnostic | **Fault codes** (with active-code badge) · **Module monitor** · **Parasitic draw** |
+| Diagnostic | **Fault codes** (with active-code badge) · **Module monitor** · **Parasitic draw** · **Recalls & bulletins** |
 | Advanced | **EcuBus-Pro** (CAN/UDS tooling) · **PCM identity** |
 | Records | **Compare** · **Freeze frames** · **Session log** |
 | (bottom) | **Settings** |
@@ -179,7 +190,7 @@ The full reference is [`docs/ui-styling.md`](docs/ui-styling.md). In short:
 │ Renderer (React 18 + Zustand)                                       │
 │                                                                     │
 │   App shell (Sidebar · Toolbar · ConnectionPopover)                 │
-│   19 screens ── components/ui ── theme tokens (CSS variables)       │
+│   20 screens ── components/ui ── theme tokens (CSS variables)       │
 │        │                                                            │
 │        └── appStore (Zustand) ◄── IPC events                        │
 └────────────────────────────┬────────────────────────────────────────┘
@@ -232,18 +243,22 @@ ATRV     Live battery voltage
 │   │   │   ├── preload.ts             #   contextBridge API surface
 │   │   │   ├── appearance.ts          #   saved System/Light/Dark override
 │   │   │   ├── storageService.ts      #   JSON + SQLite backends, migration
-│   │   │   └── claudeAssistant.ts     #   Claude API bridge, encrypted key store
+│   │   │   ├── claudeAssistant.ts     #   Claude API bridge, encrypted key store
+│   │   │   ├── nhtsa.ts               #   recalls, bulletins and complaints from NHTSA
+│   │   │   └── vinDecoder.ts          #   offline (corgi) + online vPIC VIN decoding
 │   │   ├── core/                      # Protocol layer (no Electron imports)
 │   │   │   ├── elm327Commander.ts     #   AT engine, timeouts, retries
 │   │   │   ├── elm327Simulator.ts     #   offline 2004 Silverado session
 │   │   │   ├── obdProtocolManager.ts  #   poll loop, DTC scan, wake check
 │   │   │   ├── pidCatalog.ts          #   PID catalog, J1979 decode functions
-│   │   │   ├── dtcCatalog.generated.ts #  371 codes (see scripts/gen-dtc-catalog.ts)
+│   │   │   ├── dtcCatalog.generated.ts #  371 curated codes (see scripts/gen-dtc-catalog.ts)
+│   │   │   ├── dtcGeneric.generated.ts #  9,533 OBDex generic codes (npm run gen:obdex)
+│   │   │   ├── dtcLookup.ts           #   curated catalog first, then OBDex
 │   │   │   ├── pcmDiagnostics.ts      #   GM Mode 3C identity read (read-only)
 │   │   │   └── platforms/             #   gmt800 · generic · registry
 │   │   └── renderer/
 │   │       ├── App.tsx                #   app shell, routing, IPC wiring, shortcuts
-│   │       ├── screens/               #   19 screens
+│   │       ├── screens/               #   20 screens
 │   │       ├── store/appStore.ts      #   Zustand global state
 │   │       ├── theme/                 #   theme.ts (tokens) · globalStyles.ts
 │   │       └── components/
@@ -284,8 +299,8 @@ ATRV     Live battery voltage
 ### Install and run
 
 ```bash
-git clone git@github.com:jmjohns9/agador-spartacus.git
-cd agador-spartacus/files
+git clone git@github.com:jmjohns9/Tellstone.git
+cd Tellstone/files
 npm install      # postinstall rebuilds better-sqlite3 and serialport for Electron
 npm run dev
 ```
@@ -376,6 +391,10 @@ The suites sit next to the code they test:
 | `src/renderer/components/ui/*.test.ts` | Gauge geometry, status logic, component barrel exports |
 | `src/renderer/components/shell/shellLogic.test.ts` | Toolbar battery status and connection tone |
 | `scripts/check-styles.test.mjs` | The screen style linter |
+| `src/core/dtcLookup.test.ts` | Curated codes winning over OBDex, and the OBDex mapping |
+| `src/main/nhtsa.test.ts` | Parsing NHTSA recalls, bulletins and complaints, and the model-name fallback |
+| `src/main/vinDecoder.test.ts` | Merging offline and online VIN results; offline decoding runs under `npm run test:electron` |
+| `src/renderer/logic/safety.test.ts` | Bulletin search and the reported-code filter |
 
 For visual checks, run `npm run build && node scripts/capture-screens.mjs .screens/current`, which captures every screen in light and dark.
 
@@ -485,6 +504,9 @@ Known open findings are tracked in `eval/security/last-run-summary.md` rather th
 - PID decode formulas follow **SAE J1979**, and the GMT800 bus behaviour follows **SAE J1850 VPW**.
 - The Claude assistant uses the [Anthropic API](https://docs.anthropic.com) through `@anthropic-ai/sdk`. You supply your own API key.
 - Icons are from [Tabler Icons](https://tabler.io/icons) (MIT), bundled locally.
+- Generic fault-code text comes from [OBDex](https://github.com/foerbsnavi/OBDex) (data CC0-1.0).
+- Offline VIN decoding uses [@cardog/corgi](https://github.com/cardog-ai/corgi) (ISC), which bundles NHTSA's vPIC database.
+- Recalls, bulletins, complaints and online VIN decoding come from [NHTSA](https://www.nhtsa.gov/nhtsa-datasets-and-apis) (US government, public domain).
 
 ---
 

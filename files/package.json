@@ -1,7 +1,7 @@
 {
   "name": "silverado-dx",
   "version": "1.0.0",
-  "description": "Project Agador Spartacus — OBD-II diagnostic suite for any OBD-II vehicle",
+  "description": "Tellstone — OBD-II diagnostic suite for any OBD-II vehicle",
   "main": "dist/main/main.js",
   "scripts": {
     "dev": "concurrently \"npm run watch:main\" \"npm run watch:renderer\" \"wait-on dist/main/main.js && electron .\"",
@@ -11,14 +11,15 @@
     "dist": "npm run build && electron-builder",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.main.json --noEmit",
     "gen:dtcs": "ts-node scripts/gen-dtc-catalog.ts",
+    "gen:obdex": "ts-node scripts/gen-obdex-catalog.ts",
     "test": "TS_NODE_TRANSPILE_ONLY=1 node --require ts-node/register --test \"src/**/*.test.ts\" \"scripts/*.test.mjs\"",
     "lint:styles": "node scripts/check-styles.mjs",
-    "test:electron": "ELECTRON_RUN_AS_NODE=1 TS_NODE_TRANSPILE_ONLY=1 electron --require ts-node/register --test src/main/storageService.test.ts",
+    "test:electron": "ELECTRON_RUN_AS_NODE=1 TS_NODE_TRANSPILE_ONLY=1 electron --require ts-node/register --test src/main/storageService.test.ts src/main/vinDecoder.test.ts",
     "postinstall": "electron-builder install-app-deps"
   },
   "build": {
     "appId": "com.silveradodx.obd2",
-    "productName": "Project Agador Spartacus",
+    "productName": "Tellstone",
     "mac": {
       "category": "public.app-category.utilities",
       "target": [
@@ -62,7 +63,13 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
+    "@cardog/corgi": "^2.0.4",
     "better-sqlite3": "^12.11.1",
     "serialport": "^12.0.0"
+  },
+  "overrides": {
+    "@cardog/corgi": {
+      "better-sqlite3": "$better-sqlite3"
+    }
   }
 }

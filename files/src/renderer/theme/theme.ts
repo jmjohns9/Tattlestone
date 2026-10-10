@@ -1,4 +1,4 @@
-// ─── Project Agador Spartacus — macOS-native design tokens ───────────────────
+// ─── Tellstone — macOS-native design tokens ───────────────────
 // Apple system colours, SF type scale, 4pt spacing. Light/dark switch purely via
 // prefers-color-scheme; the main process drives it with nativeTheme.themeSource.
 

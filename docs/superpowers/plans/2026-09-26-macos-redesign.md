@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Restyle Project Agador Spartacus so it looks and behaves like a first-party macOS pro app. That means a native sidebar and toolbar, SF typography, Apple system colors, and automatic light/dark, with no change to app logic.
+**Goal:** Restyle Tellstone so it looks and behaves like a first-party macOS pro app. That means a native sidebar and toolbar, SF typography, Apple system colors, and automatic light/dark, with no change to app logic.
 
 **Architecture:** Design tokens live in `theme/theme.ts` and are emitted as CSS custom properties under `prefers-color-scheme`. The main process drives appearance through `nativeTheme.themeSource`. Shared components are rebuilt in `components/ui/*` and re-exported from the existing `components/layout/UIComponents.tsx` barrel, so no screen import breaks. Legacy CSS variable names and legacy component names stay as aliases or wrappers until every screen is swept, then get deleted.
 
@@ -12,7 +12,7 @@
 
 **Prerequisite:** Execute the code-review plan first, then rebase this branch onto its result before Task 1.
 
-**Working directory for every command:** `files/` (e.g. `/Users/joshuajohnson/projects/obd/GIT/agador-spartacus/files`), unless a path starts with `../`.
+**Working directory for every command:** `files/` (e.g. `/Users/joshuajohnson/projects/obd/GIT/Tellstone/files`), unless a path starts with `../`.
 
 ## Global Constraints
 
@@ -416,7 +416,7 @@ Expected: FAIL. The theme test errors on imports (`LIGHT` is undefined / not exp
 Replace the whole of `src/renderer/theme/theme.ts` with:
 
 ```ts
-// ─── Project Agador Spartacus — macOS-native design tokens ───────────────────
+// ─── Tellstone — macOS-native design tokens ───────────────────
 // Apple system colours, SF type scale, 4pt spacing. Light/dark switch purely via
 // prefers-color-scheme; the main process drives it with nativeTheme.themeSource.
 
@@ -892,7 +892,7 @@ function createWindow(): void {
       nodeIntegration: false,
       sandbox: false,
     },
-    title: 'Project Agador Spartacus',
+    title: 'Tellstone',
   });
 
   mainWindow.once('ready-to-show', () => mainWindow?.show());
@@ -2286,7 +2286,7 @@ export function Toolbar({ sidebarOpen, onToggleSidebar, onOpenDTC, onOpenConnect
     return () => clearInterval(id);
   }, [sessionStartMs]);
 
-  const subtitle = [vehicle.vin, vehicle.engine, vehicle.nickname].filter(Boolean).join(' · ') || 'Project Agador Spartacus';
+  const subtitle = [vehicle.vin, vehicle.engine, vehicle.nickname].filter(Boolean).join(' · ') || 'Tellstone';
   const bStatus = batteryStatus(battery);
 
   return (
@@ -2496,7 +2496,7 @@ Run: `npm run typecheck && npm test && npm run build && node scripts/capture-scr
 Open `live-light.png` and `live-dark.png`. Expected:
 - A 220px sidebar with grouped, sentence-case rows and the selected row tinted.
 - A 52px toolbar with the vehicle title and subtitle, connection item, battery and timer.
-- No tab strip, no bottom status bar and no "AGADOR SPARTACUS — LIVE TELEMETRY" header. `StatusBar` renders null.
+- No tab strip, no bottom status bar and no "TELLSTONE — LIVE TELEMETRY" header. `StatusBar` renders null.
 
 Then run `npx electron .` and check each of these:
 - ⌃⌘S hides and shows the sidebar, and a relaunch keeps the choice.

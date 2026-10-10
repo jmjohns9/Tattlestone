@@ -3,7 +3,7 @@
 ## Repository root
 
 ```
-agador-spartacus/
+Tellstone/
 ├── files/                  # The application (all source lives in files/src/)
 ├── eval/                   # Automated code review harness
 ├── docs/                   # ui-styling.md, screenshots, specs, plans, code-review report
@@ -31,6 +31,8 @@ files/src/
 │   ├── obdProtocolManager.ts     # Poll loop, PID discovery, DTC scan, exclusive() bus lock
 │   ├── pidCatalog.ts             # 34 PIDs with J1979 decode/format and warn/crit limits
 │   ├── dtcCatalog.generated.ts   # 371 codes — hand-curated despite the name
+│   ├── dtcGeneric.generated.ts   # 9,533 OBDex generic codes (npm run gen:obdex), CC0
+│   ├── dtcLookup.ts              # Curated catalog first, then OBDex
 │   ├── pcmDiagnostics.ts         # GM Mode 3C identity read (read-only)
 │   ├── elm327Simulator.ts        # Offline 2004 Silverado J1850 VPW session
 │   ├── readOnly.test.ts          # Enforces the read-only rule over a whole session
@@ -41,13 +43,16 @@ files/src/
 │   ├── preload.ts                # contextBridge API surface (window.electronAPI)
 │   ├── storageService.ts         # JSON (atomic, cached) + SQLite backends, migration
 │   ├── claudeAssistant.ts        # Anthropic SDK bridge, safeStorage key encryption
-│   └── appearance.ts             # Saved System / Light / Dark override
+│   ├── appearance.ts             # Saved System / Light / Dark override
+│   ├── nhtsa.ts                  # NHTSA recalls, bulletins, complaints (30-min cache)
+│   └── vinDecoder.ts             # Offline (corgi + vPIC db in userData) + online vPIC
 │
 └── renderer/                     # React UI
     ├── index.tsx                 # Entry: injects theme CSS, ErrorBoundary, App
     ├── App.tsx                   # Shell: Sidebar + Toolbar, SCREENS map, IPC wiring, shortcuts
     ├── store/appStore.ts         # Zustand store + selectors
     ├── logic/verdicts.ts         # Tested screen verdicts: drain rate, trends, SoC, readiness
+    ├── logic/safety.ts           # Bulletin search and reported-code filter
     ├── theme/                    # theme.ts (tokens, buildThemeCSS) · globalStyles.ts
     ├── components/
     │   ├── ui/                   # Card, Metric, Gauge, Sparkline, VoltageTimeline,
@@ -55,7 +60,7 @@ files/src/
     │   ├── layout/UIComponents.tsx  # The component surface screens import (re-exports ui/)
     │   ├── shell/                # Sidebar, Toolbar, ConnectionPopover, navItems, shellLogic
     │   └── ErrorBoundary.tsx
-    └── screens/                  # One file per screen (19)
+    └── screens/                  # One file per screen (20)
 ```
 
 ---

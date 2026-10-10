@@ -57,9 +57,9 @@ test('sidebar pref defaults open and survives throwing storage', () => {
   assert.doesNotThrow(() => writeSidebarPref({ setItem: () => { throw new Error('blocked'); } }, false));
 });
 
-test('navigation lists all 19 screens exactly once, settings last', () => {
-  assert.equal(ALL_SCREEN_IDS.length, 19);
-  assert.equal(new Set(ALL_SCREEN_IDS).size, 19);
+test('navigation lists all 20 screens exactly once, settings last', () => {
+  assert.equal(ALL_SCREEN_IDS.length, 20);
+  assert.equal(new Set(ALL_SCREEN_IDS).size, 20);
   assert.equal(ALL_SCREEN_IDS[ALL_SCREEN_IDS.length - 1], 'settings');
   assert.deepEqual(NAV_GROUPS.map(g => g.title), [undefined, 'Overview', 'Subsystems', 'Diagnostic', 'Advanced', 'Records']);
 });

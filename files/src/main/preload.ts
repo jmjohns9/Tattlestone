@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { PIDReading, DTCCode, ModuleState, ConnectionStatus, LogEntry, SessionSnapshot, DataRecording, FreezeFrame, StorageConfig, StorageInfo, ReportPayload, PcmReadResult, Appearance } from '../shared/types';
+import { PIDReading, DTCCode, ModuleState, ConnectionStatus, LogEntry, SessionSnapshot, DataRecording, FreezeFrame, StorageConfig, StorageInfo, ReportPayload, PcmReadResult, Appearance, VehicleSafetyReport } from '../shared/types';
 
 // ─── Secure IPC Bridge (contextIsolation: true) ────────────────────────────────
 // All communication between the renderer (React) and main process
@@ -73,6 +73,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   decodeVIN: (vin: string) => ipcRenderer.invoke('obd:decode-vin', { vin }),
+
+  // ── NHTSA recalls, bulletins and complaints ────────────────────────────────
+  vehicleSafety: (vehicle: { year: string; make: string; model: string }, codes: string[], refresh?: boolean): Promise<VehicleSafetyReport | null> =>
+    ipcRenderer.invoke('nhtsa:vehicle-safety', { vehicle, codes, refresh }),
+  openBulletin: (id: number): Promise<boolean> => ipcRenderer.invoke('nhtsa:open-bulletin', { id }),
 
   storage: {
     getConfig:          (): Promise<StorageConfig>                    => ipcRenderer.invoke('storage:get-config'),
