@@ -411,3 +411,58 @@ export type PcmReadResult =
 
 /** Window appearance override. 'system' follows macOS. */
 export type Appearance = 'system' | 'light' | 'dark';
+
+// ─── NHTSA recalls, bulletins and complaints ─────────────────────────────────
+
+export interface NhtsaRecall {
+  campaign: string;          // NHTSA campaign number, e.g. '08E050000'
+  manufacturer: string;
+  component: string;
+  reportDate: string;        // ISO date, or '' when NHTSA gives none
+  summary: string;
+  consequence: string;
+  remedy: string;
+}
+
+/** A manufacturer communication filed with NHTSA: TSBs, PIs, special coverage. */
+export interface NhtsaBulletin {
+  id: number;                // NHTSA ID, used to fetch the PDF on demand
+  number: string;            // the manufacturer's bulletin number, e.g. 'PIT6406A'
+  date: string;
+  components: string[];
+  summary: string;
+  codes: string[];           // DTCs mentioned in the summary
+}
+
+export interface NhtsaComplaint {
+  id: number;
+  date: string;
+  components: string[];
+  summary: string;
+  crash: boolean;
+  fire: boolean;
+}
+
+export interface NhtsaComplaintSummary {
+  total: number;
+  crashes: number;
+  fires: number;
+  injuries: number;
+  deaths: number;
+  byComponent: Array<{ component: string; count: number }>;
+  /** Complaints that mention one of the requested codes, newest first. */
+  mentioningCodes: NhtsaComplaint[];
+  recent: NhtsaComplaint[];
+}
+
+export type NhtsaSection<T> = { ok: true; data: T } | { ok: false; error: string };
+
+export interface VehicleSafetyReport {
+  year: string;
+  make: string;
+  model: string;
+  fetchedAt: number;
+  recalls: NhtsaSection<NhtsaRecall[]>;
+  bulletins: NhtsaSection<NhtsaBulletin[]>;
+  complaints: NhtsaSection<NhtsaComplaintSummary>;
+}

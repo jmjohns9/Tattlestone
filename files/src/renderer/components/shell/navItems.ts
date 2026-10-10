@@ -23,6 +23,7 @@ export const NAV_GROUPS: ReadonlyArray<{ title?: string; items: ReadonlyArray<Na
     { id: 'dtc',      icon: 'ti-alert-triangle',   label: 'Fault codes' },
     { id: 'modules',  icon: 'ti-cpu',              label: 'Module monitor' },
     { id: 'parasite', icon: 'ti-zoom-exclamation', label: 'Parasitic draw' },
+    { id: 'recalls',  icon: 'ti-file-alert',       label: 'Recalls & bulletins' },
   ] },
   { title: 'Advanced', items: [
     { id: 'ecubus', icon: 'ti-circuit-diode', label: 'EcuBus-Pro' },

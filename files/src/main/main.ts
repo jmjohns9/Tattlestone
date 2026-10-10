@@ -13,6 +13,8 @@ import { askClaude, loadConfig as loadClaudeConfig, saveConfig as saveClaudeConf
 import * as fs from 'fs';
 import { StorageService } from './storageService';
 import { loadAppearance, saveAppearance, parseAppearance } from './appearance';
+import { decodeVin } from './vinDecoder';
+import { fetchVehicleSafety, bulletinPdfUrl, validVehicle } from './nhtsa';
 
 // SerialPort is a native module — use require() to avoid dynamic import issues in Electron
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -570,26 +572,31 @@ handle('obd:check-modules', async () => {
 });
 
 handle('obd:decode-vin', async (_event, { vin }: { vin: string }) => {
-  if (typeof vin !== 'string' || !/^[A-HJ-NPR-Z0-9]{17}$/i.test(vin)) return null;
-  try {
-    // Bounded: on a dead or captive network in the field this could hang for minutes
-    const res = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvalues/${encodeURIComponent(vin)}?format=json`,
-      { signal: AbortSignal.timeout(10_000) });
-    if (!res.ok) return null;
-    const json: any = await res.json();
-    const r = json.Results?.[0];
-    if (!r) return null;
-    return {
-      year: r.ModelYear ?? '',
-      make: r.Make ?? '',
-      model: r.Model ?? '',
-      engine: [r.DisplacementL ? `${r.DisplacementL}L` : '', r.EngineCylinders ? `${r.EngineCylinders}-cyl` : '', r.FuelTypePrimary ?? ''].filter(Boolean).join(' '),
-      trim: r.Trim ?? '',
-      transmission: r.TransmissionStyle ?? '',
-    };
-  } catch {
-    return null;
-  }
+  if (typeof vin !== 'string') return null;
+  return decodeVin(vin.toUpperCase(), app.getPath('userData'));
+});
+
+// ─── NHTSA recalls, bulletins and complaints ─────────────────────────────────
+
+handle('nhtsa:vehicle-safety', async (_event, { vehicle, codes, refresh }: {
+  vehicle: { year: string; make: string; model: string }; codes: string[]; refresh?: boolean;
+}) => {
+  if (!vehicle || !validVehicle(vehicle)) return null;
+  const safeCodes = (Array.isArray(codes) ? codes : [])
+    .filter((c): c is string => typeof c === 'string' && /^[PBCU][0-9A-F]{4}$/i.test(c)).slice(0, 50);
+  return fetchVehicleSafety(
+    { year: vehicle.year.trim(), make: vehicle.make.trim(), model: vehicle.model.trim() },
+    safeCodes, { refresh: refresh === true });
+});
+
+// Opens one bulletin's PDF in the browser. Only NHTSA's document store is
+// allowed, whatever the API returns.
+handle('nhtsa:open-bulletin', async (_event, { id }: { id: number }) => {
+  if (!Number.isInteger(id) || id <= 0) return false;
+  const url = await bulletinPdfUrl(id).catch(() => null);
+  if (!url) return false;
+  await shell.openExternal(url);
+  return true;
 });
 
 // `text` is the renderer's log (it includes the user's markers, which never
