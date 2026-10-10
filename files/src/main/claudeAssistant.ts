@@ -110,6 +110,8 @@ export function saveConfig(cfg: Partial<ClaudeConfig>): void {
 // ── Context payload sent from the renderer with each question ────────────────
 export interface SessionContext {
   vehicle: string;               // user-entered description: year/make/model/engine/VIN/notes
+  /** Structured year/make/model, used to look up NHTSA data for the reference block. */
+  vehicleYmm?: { year: string; make: string; model: string };
   connectionStatus: string;
   protocol: string;
   liveData: Array<{ pid: string; name: string; value: number | string; unit: string }>;
@@ -131,12 +133,13 @@ export interface ChatTurn { role: 'user' | 'assistant'; content: string; }
 
 const SYSTEM_PROMPT = `You are the built-in diagnostic assistant inside "Tellstone", a macOS OBD-II diagnostic app. The app connects to whatever vehicle the user plugs the adapter into — the vehicle description, if the user provided one, is included in each session snapshot.
 
-You receive a live snapshot with every question: vehicle description, connection state, live PID readings, stored DTCs, and recent app logs.
+You receive a live snapshot with every question: vehicle description, connection state, live PID readings, stored DTCs, and recent app logs. When the question concerns fault codes, a <reference-data> block follows with what Tellstone's catalogs and NHTSA say about them.
 
 Guidelines:
 - Be a sharp, practical drivability tech. Give specific, actionable answers grounded in the snapshot data — quote actual values when relevant.
 - Tailor advice to the vehicle described in the snapshot (platform-specific systems, known failure patterns, correct specs). If no vehicle is set, give general OBD-II guidance and suggest filling in the vehicle profile on the Connect screen for sharper answers.
 - Battery voltage context: 12.6V+ healthy rest, <12.4V discharged, ~13.5–14.7V charging.
+- For what a code means, its causes and bulletins, use the reference data and name its source. If a code isn't in it, say its meaning is unconfirmed rather than guessing, especially for manufacturer-specific codes.
 - If data needed to answer is missing from the snapshot, say what to check or which screen/test to run.
 - Keep answers concise: a few sentences for simple questions, short structured steps for procedures. No filler.`;
 
@@ -192,6 +195,8 @@ export interface AskOptions {
   onText?: (delta: string) => void;
   /** Abort the in-flight request (Cancel button / window closed). */
   signal?: AbortSignal;
+  /** Reference data looked up for this question (see assistantGrounding.ts). */
+  reference?: string;
 }
 
 // ── Ask Claude — streams the reply, resolves with full text + usage ──────────
@@ -210,7 +215,9 @@ export async function askClaude(
     ...history.slice(-12),                       // keep the conversation bounded
     {
       role: 'user',
-      content: `<session-snapshot>\n${formatContext(ctx)}\n</session-snapshot>\n\n${question}`,
+      content: `<session-snapshot>\n${formatContext(ctx)}\n</session-snapshot>\n\n`
+        + (opts.reference ? `<reference-data>\n${opts.reference}\n</reference-data>\n\n` : '')
+        + question,
     },
   ];
 

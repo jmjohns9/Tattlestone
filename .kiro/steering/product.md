@@ -15,7 +15,7 @@ Started as a targeted tool for chasing a parasitic battery drain on a **2004 Che
 - **Parasitic draw suite** — battery drain rate measured over time, voltage timeline, interactive fuse map, step-by-step isolation checklist. The Module monitor lists platform modules but has no wake detection yet.
 - **GM-specific** — read-only PCM identity over J1850 VPW Mode 3C (VIN, HW/SW IDs, calibration blocks from P01/P59-family PCMs). Refused on non-VPW vehicles.
 - **EcuBus-Pro** — a clearly labelled **demo** of CAN/UDS/LIN/DoIP tooling. It shows sample data, offers read-only UDS services only, and sends nothing.
-- **Claude assistant** — in-app chat that receives a live session snapshot as context. Default model Claude Opus 5.5. API key encrypted via Electron `safeStorage`.
+- **Claude assistant** — in-app chat that receives a live session snapshot as context. Code questions are grounded in a `<reference-data>` block (catalog entry + NHTSA bulletins/complaints per code, built in `main/assistantGrounding.ts`); answers show a Reference line. Default model Claude Opus 5.5. API key encrypted via Electron `safeStorage`.
 - **Records** — data logger (CSV/JSON), session snapshots, live-vs-snapshot compare, session log, PDF report.
 - **Storage** — flat JSON (atomic writes) or SQLite (`better-sqlite3`), migratable in-app.
 - **macOS-native UI** — System / Light / Dark appearance, sidebar and toolbar shell. See `tech.md` → UI / styling.

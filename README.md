@@ -38,6 +38,7 @@ A built-in ELM327 simulator lets the whole app run offline, so you don't need a 
 ### Recalls, bulletins and a bigger code catalog
 
 - **Recalls & bulletins screen (new).** Looks up the vehicle's safety recalls, manufacturer bulletins (TSBs, GM PIs, special coverage) and owner complaints from NHTSA. Bulletins and complaints that cite a code the vehicle reported are flagged, and each bulletin's PDF opens from NHTSA. Free public-domain data, no API key.
+- **Grounded assistant answers.** The Claude assistant answers code questions from Tellstone's catalogs and NHTSA bulletins, not from memory, and shows which sources it used.
 - **9,500+ generic fault codes.** Codes missing from the curated GMT800 catalog now fall back to [OBDex](https://github.com/foerbsnavi/OBDex) (CC0): description, likely causes ranked by likelihood, symptoms and repair effort.
 - **Offline VIN decoding.** VINs decode against a bundled copy of NHTSA's vPIC database ([corgi](https://github.com/cardog-ai/corgi)), so it works with no network. When online, the vPIC API fills in trim and transmission.
 
@@ -144,6 +145,7 @@ All screenshots were captured from the built-in simulator in light mode, so you 
 
 **Claude assistant**
 - An in-app chat that receives a snapshot of the live session as context: current PIDs, active DTCs and the recent log.
+- Answers about fault codes are grounded in Tellstone's own data. For the vehicle's codes and any code typed in the question, it sends the catalog entry (GMT800 or OBDex) and the NHTSA bulletins and complaints that cite it. Claude names the source, says when a code isn't in the catalogs, and is warned when a GM meaning is applied to another make. Each answer shows a "Reference" line listing what it used.
 - Selectable model, streaming responses, and chat export to Markdown.
 - The API key is stored in the app's `userData` directory and encrypted at rest through the OS keychain (Electron `safeStorage`).
 
@@ -244,6 +246,7 @@ ATRV     Live battery voltage
 │   │   │   ├── appearance.ts          #   saved System/Light/Dark override
 │   │   │   ├── storageService.ts      #   JSON + SQLite backends, migration
 │   │   │   ├── claudeAssistant.ts     #   Claude API bridge, encrypted key store
+│   │   │   ├── assistantGrounding.ts  #   reference data for the assistant's code answers
 │   │   │   ├── nhtsa.ts               #   recalls, bulletins and complaints from NHTSA
 │   │   │   └── vinDecoder.ts          #   offline (corgi) + online vPIC VIN decoding
 │   │   ├── core/                      # Protocol layer (no Electron imports)
@@ -393,6 +396,7 @@ The suites sit next to the code they test:
 | `scripts/check-styles.test.mjs` | The screen style linter |
 | `src/core/dtcLookup.test.ts` | Curated codes winning over OBDex, and the OBDex mapping |
 | `src/main/nhtsa.test.ts` | Parsing NHTSA recalls, bulletins and complaints, and the model-name fallback |
+| `src/main/assistantGrounding.test.ts` | The assistant's reference block: sources, make cautions, bulletins, prompt fencing |
 | `src/main/vinDecoder.test.ts` | Merging offline and online VIN results; offline decoding runs under `npm run test:electron` |
 | `src/renderer/logic/safety.test.ts` | Bulletin search and the reported-code filter |
 

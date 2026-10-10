@@ -455,6 +455,13 @@ export interface NhtsaComplaintSummary {
   recent: NhtsaComplaint[];
 }
 
+/** What the assistant's answer was grounded in (see main/assistantGrounding.ts). */
+export interface GroundingSummary {
+  codes: Array<{ code: string; source: 'gmt800' | 'obdex' | 'none' }>;
+  bulletins: number;
+  complaints: number;
+}
+
 export type NhtsaSection<T> = { ok: true; data: T } | { ok: false; error: string };
 
 export interface VehicleSafetyReport {

@@ -4,7 +4,7 @@ import { FONTS, TYPE } from './theme/theme';
 import { Sidebar } from './components/shell/Sidebar';
 import { Toolbar } from './components/shell/Toolbar';
 import { shortcutFor, readSidebarPref, writeSidebarPref } from './components/shell/shellLogic';
-import { PIDReading, DTCCode, ModuleState, LogEntry, SessionSnapshot, DataRecording, FreezeFrame, StorageConfig, StorageInfo, ReportPayload, PcmReadResult, Appearance, VehicleSafetyReport } from '../shared/types';
+import { PIDReading, DTCCode, ModuleState, LogEntry, SessionSnapshot, DataRecording, FreezeFrame, StorageConfig, StorageInfo, ReportPayload, PcmReadResult, Appearance, VehicleSafetyReport, GroundingSummary } from '../shared/types';
 
 // Screens
 import { ConnectionScreen }   from './screens/ConnectionScreen';
@@ -54,7 +54,7 @@ declare global {
       onVINDetected: (cb: (vin: string) => void) => () => void;
       claudeAsk: (payload: { question: string; context: unknown; history: unknown }) =>
         Promise<
-          | { ok: true; text: string; model: string; usage: { input_tokens: number; output_tokens: number } }
+          | { ok: true; text: string; model: string; usage: { input_tokens: number; output_tokens: number }; grounding?: GroundingSummary }
           | { ok: false; error: string; cancelled?: boolean }
         >;
       claudeGetConfig: () => Promise<{

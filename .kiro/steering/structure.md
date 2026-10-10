@@ -44,6 +44,7 @@ files/src/
 │   ├── storageService.ts         # JSON (atomic, cached) + SQLite backends, migration
 │   ├── claudeAssistant.ts        # Anthropic SDK bridge, safeStorage key encryption
 │   ├── appearance.ts             # Saved System / Light / Dark override
+│   ├── assistantGrounding.ts     # Reference block for the assistant: catalog + NHTSA per code
 │   ├── nhtsa.ts                  # NHTSA recalls, bulletins, complaints (30-min cache)
 │   └── vinDecoder.ts             # Offline (corgi + vPIC db in userData) + online vPIC
 │

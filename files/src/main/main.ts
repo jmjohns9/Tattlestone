@@ -6,7 +6,7 @@ import { execFile } from 'child_process';
 import { ELM327Commander } from '../core/elm327Commander';
 import { ELM327Simulator } from '../core/elm327Simulator';
 import { OBDProtocolManager } from '../core/obdProtocolManager';
-import { PIDReading, ConnectionStatus, LogEntry, PcmReadResult } from '../shared/types';
+import { PIDReading, ConnectionStatus, LogEntry, PcmReadResult, VehicleSafetyReport } from '../shared/types';
 import { PcmDiagnostics } from '../core/pcmDiagnostics';
 import { GMT800 } from '../core/platforms/gmt800';
 import { askClaude, loadConfig as loadClaudeConfig, saveConfig as saveClaudeConfig, SessionContext, ChatTurn, CLAUDE_MODELS, DEFAULT_SYSTEM_PROMPT } from './claudeAssistant';
@@ -15,6 +15,7 @@ import { StorageService } from './storageService';
 import { loadAppearance, saveAppearance, parseAppearance } from './appearance';
 import { decodeVin } from './vinDecoder';
 import { fetchVehicleSafety, bulletinPdfUrl, validVehicle } from './nhtsa';
+import { buildGrounding, codesToGround } from './assistantGrounding';
 
 // SerialPort is a native module — use require() to avoid dynamic import issues in Electron
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -623,6 +624,17 @@ handle('session:export-log', async (_event, { filename, text }: { filename: stri
 // controller is enough. Cancel aborts the fetch mid-stream.
 let activeAskController: AbortController | null = null;
 
+// NHTSA data for the reference block. Bounded so a slow NHTSA never holds up
+// the answer; the lookup keeps going and is cached for the next question.
+const NHTSA_WAIT_MS = 5_000;
+
+async function safetyFor(ymm: SessionContext['vehicleYmm'], codes: string[]): Promise<VehicleSafetyReport | null> {
+  if (!ymm || !validVehicle(ymm)) return null;
+  const lookup = fetchVehicleSafety({ year: ymm.year.trim(), make: ymm.make.trim(), model: ymm.model.trim() }, codes)
+    .catch(() => null);
+  return Promise.race([lookup, new Promise<null>(r => setTimeout(() => r(null), NHTSA_WAIT_MS))]);
+}
+
 handle('claude:ask', async (_event, { question, context, history }: {
   question: string; context: SessionContext; history: ChatTurn[];
 }) => {
@@ -630,10 +642,18 @@ handle('claude:ask', async (_event, { question, context, history }: {
   const controller = new AbortController();
   activeAskController = controller;
   try {
-    return await askClaude(question, context, history, {
+    const reported = (Array.isArray(context?.dtcs) ? context.dtcs : [])
+      .map(d => d?.code).filter((c): c is string => typeof c === 'string' && /^[PBCU][0-9A-F]{4}$/i.test(c));
+    const codes = codesToGround(reported, typeof question === 'string' ? question : '');
+    const grounding = codes.length
+      ? buildGrounding(codes, context?.vehicleYmm?.make ?? '', await safetyFor(context?.vehicleYmm, codes))
+      : null;
+    const result = await askClaude(question, context, history, {
       signal: controller.signal,
       onText: (delta) => sendToRenderer('claude:stream-chunk', delta),
+      reference: grounding?.text,
     });
+    return result.ok && grounding ? { ...result, grounding: grounding.summary } : result;
   } finally {
     if (activeAskController === controller) activeAskController = null;
   }
