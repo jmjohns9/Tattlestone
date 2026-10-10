@@ -1,8 +1,8 @@
-# Project Agador Spartacus
+# Tellstone
 
 **An OBD-II diagnostic suite for the Mac. It reads live telemetry and fault codes, analyses parasitic battery drain, and includes a Claude-powered diagnostic assistant.**
 
-![Project Agador Spartacus in light mode: the Vehicle health screen](docs/screenshots/health.png)
+![Tellstone in light mode: the Vehicle health screen](docs/screenshots/health.png)
 
 The app is built with Electron, React and TypeScript, and talks to an ELM327-class adapter over Bluetooth or USB serial. It started as a tool for chasing a parasitic battery drain on a 2004 Chevrolet Silverado 1500 Z71 (GM GMT800, J1850 VPW), and has since been generalized. The protocol layer works with any OBD-II vehicle. Platform-specific reference data (module maps, fuse panels, draw checklists) comes from a registry.
 
@@ -284,8 +284,8 @@ ATRV     Live battery voltage
 ### Install and run
 
 ```bash
-git clone git@github.com:jmjohns9/agador-spartacus.git
-cd agador-spartacus/files
+git clone git@github.com:jmjohns9/Tellstone.git
+cd Tellstone/files
 npm install      # postinstall rebuilds better-sqlite3 and serialport for Electron
 npm run dev
 ```

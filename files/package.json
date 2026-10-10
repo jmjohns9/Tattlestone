@@ -1,7 +1,7 @@
 {
   "name": "silverado-dx",
   "version": "1.0.0",
-  "description": "Project Agador Spartacus — OBD-II diagnostic suite for any OBD-II vehicle",
+  "description": "Tellstone — OBD-II diagnostic suite for any OBD-II vehicle",
   "main": "dist/main/main.js",
   "scripts": {
     "dev": "concurrently \"npm run watch:main\" \"npm run watch:renderer\" \"wait-on dist/main/main.js && electron .\"",
@@ -18,7 +18,7 @@
   },
   "build": {
     "appId": "com.silveradodx.obd2",
-    "productName": "Project Agador Spartacus",
+    "productName": "Tellstone",
     "mac": {
       "category": "public.app-category.utilities",
       "target": [

@@ -1,4 +1,4 @@
-# Code review report: Project Agador Spartacus
+# Code review report: Tellstone
 
 - **Date:** 2026-09-28
 - **Branch:** `review/code-review` (from `main` at 58b830b)

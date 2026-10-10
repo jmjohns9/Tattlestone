@@ -152,7 +152,7 @@ export function SettingsScreen(): React.ReactElement {
       <SectionHeader>About</SectionHeader>
       <Card style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <Card padding={0}>
-          {infoRow('App', `Project Agador Spartacus${appInfo ? ` v${appInfo.version}` : ''}`)}
+          {infoRow('App', `Tellstone${appInfo ? ` v${appInfo.version}` : ''}`)}
           {appInfo && infoRow('Electron', appInfo.electron)}
           {appInfo && infoRow('Chromium', appInfo.chrome)}
           {appInfo && infoRow('Node', appInfo.node)}

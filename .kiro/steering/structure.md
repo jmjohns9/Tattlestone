@@ -3,7 +3,7 @@
 ## Repository root
 
 ```
-agador-spartacus/
+Tellstone/
 ├── files/                  # The application (all source lives in files/src/)
 ├── eval/                   # Automated code review harness
 ├── docs/                   # ui-styling.md, screenshots, specs, plans, code-review report

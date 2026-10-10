@@ -265,7 +265,7 @@ export function AssistantScreen(): React.ReactElement {
   const exportChat = async () => {
     if (messages.length === 0) return;
     const md = [
-      `# Agador Spartacus — Assistant chat`,
+      `# Tellstone — Assistant chat`,
       `*Exported ${new Date().toLocaleString()}*`,
       ``,
       `**Vehicle:** ${vehicleDisplayName(vehicle)}`,
@@ -279,7 +279,7 @@ export function AssistantScreen(): React.ReactElement {
     ].join('\n');
     const slug = [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join('-')
       .replace(/[^a-zA-Z0-9-]/g, '').toLowerCase() || 'session';
-    const filename = `agador-${slug}-chat-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.md`;
+    const filename = `tellstone-${slug}-chat-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.md`;
     await window.electronAPI.claudeExportChat?.(md, filename);
   };
 

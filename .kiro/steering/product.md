@@ -1,6 +1,6 @@
-# Product — Project Agador Spartacus
+# Product — Tellstone
 
-**Project Agador Spartacus** (package name: `silverado-dx`) is a macOS desktop OBD-II diagnostic suite built with Electron. It connects to any ELM327-class adapter over Bluetooth or USB serial and provides real-time vehicle telemetry, fault-code reading, and a parasitic-draw isolation workflow.
+**Tellstone** (package name: `silverado-dx`) is a macOS desktop OBD-II diagnostic suite built with Electron. It connects to any ELM327-class adapter over Bluetooth or USB serial and provides real-time vehicle telemetry, fault-code reading, and a parasitic-draw isolation workflow.
 
 ## Origin and scope
 
