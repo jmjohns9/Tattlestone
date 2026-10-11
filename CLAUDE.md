@@ -11,3 +11,6 @@
 - Do not overthink. If the answer is obvious, just give it.
 - No step-by-step breakdown unless I ask for one.
 - No "let me think about this" or meta-commentary.
+
+# Git
+- Run git and gh commands yourself: branch, commit, push, open PRs, merge PRs, sync branches. Don't hand git steps to me.
