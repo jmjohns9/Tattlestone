@@ -12,7 +12,6 @@ import { GMT800 } from '../core/platforms/gmt800';
 import { askClaude, loadConfig as loadClaudeConfig, saveConfig as saveClaudeConfig, SessionContext, ChatTurn, CLAUDE_MODELS, DEFAULT_SYSTEM_PROMPT } from './claudeAssistant';
 import * as fs from 'fs';
 import { StorageService } from './storageService';
-import { loadAppearance, saveAppearance, parseAppearance } from './appearance';
 import { decodeVin } from './vinDecoder';
 import { fetchVehicleSafety, bulletinPdfUrl, validVehicle } from './nhtsa';
 import { buildGrounding, codesToGround } from './assistantGrounding';
@@ -28,7 +27,11 @@ const { SerialPort } = require('serialport') as { SerialPort: any };
 // packaged, so the two used different folders and saved sessions and the API
 // key didn't carry over. Pin it to the folder existing installs already use.
 // Must run before anything calls app.getPath('userData').
-app.setPath('userData', path.join(app.getPath('appData'), 'silverado-dx'));
+// An explicit --user-data-dir wins: the screenshot harness passes a throwaway
+// profile, and pinning over it wrote test data into the real one.
+if (!app.commandLine.hasSwitch('user-data-dir')) {
+  app.setPath('userData', path.join(app.getPath('appData'), 'silverado-dx'));
+}
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -54,9 +57,9 @@ function handle<A extends unknown[], R>(
 }
 
 function createWindow(): void {
-  // Apply the saved override before the window exists so vibrancy and
-  // prefers-color-scheme are correct on the very first frame.
-  nativeTheme.themeSource = loadAppearance(app.getPath('userData'));
+  // Light only: pin it so the sidebar vibrancy and native controls stay light
+  // even when macOS is in dark mode.
+  nativeTheme.themeSource = 'light';
 
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -454,17 +457,6 @@ function startOBDManager(gen: number, commander: ELM327Commander): void {
 }
 
 // ─── IPC Handlers ─────────────────────────────────────────────────────────────
-
-// ─── Appearance ──────────────────────────────────────────────────────────────
-
-handle('app:get-appearance', () => loadAppearance(app.getPath('userData')));
-
-handle('app:set-appearance', (_event, value: unknown) => {
-  const appearance = parseAppearance(value);
-  nativeTheme.themeSource = appearance;
-  saveAppearance(app.getPath('userData'), appearance);
-  return appearance;
-});
 
 handle('obd:list-ports', async () => {
   try {
