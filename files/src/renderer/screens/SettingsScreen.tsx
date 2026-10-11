@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { StorageConfig, StorageInfo } from '../../shared/types';
-import type { Appearance } from '../../shared/types';
 import {
   ScrollPane, Card, SectionHeader, SegmentedControl, AlertBanner, Button, DataRow,
 } from '../components/layout/UIComponents';
@@ -21,13 +20,6 @@ export function SettingsScreen(): React.ReactElement {
 
   const [appInfo, setAppInfo] = useState<{ version: string; electron: string; chrome: string; node: string } | null>(null);
   useEffect(() => { window.electronAPI.getAppInfo().then(setAppInfo).catch(() => {}); }, []);
-
-  const [appearance, setAppearanceState] = useState<Appearance>('system');
-  useEffect(() => { window.electronAPI.getAppearance().then(setAppearanceState).catch(() => {}); }, []);
-  const changeAppearance = async (a: Appearance) => {
-    setAppearanceState(a);
-    setAppearanceState(await window.electronAPI.setAppearance(a));
-  };
 
   const reload = useCallback(async () => {
     const [cfg, inf] = await Promise.all([
@@ -65,23 +57,6 @@ export function SettingsScreen(): React.ReactElement {
 
   return (
     <ScrollPane>
-      <SectionHeader>Appearance</SectionHeader>
-      <Card>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <span style={{ ...TYPE.body, color: 'var(--label)' }}>Theme</span>
-          <SegmentedControl<Appearance>
-            ariaLabel="Theme"
-            value={appearance}
-            onChange={changeAppearance}
-            options={[
-              { value: 'system', label: 'System' },
-              { value: 'light',  label: 'Light' },
-              { value: 'dark',   label: 'Dark' },
-            ]}
-          />
-        </div>
-      </Card>
-
       <SectionHeader>Storage backend</SectionHeader>
 
       {migrateError && <AlertBanner variant="crit" message={migrateError} />}

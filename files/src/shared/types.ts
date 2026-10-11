@@ -425,11 +425,6 @@ export interface VehicleInfo {
 
 export type VehicleInfoResult = { ok: true; info: VehicleInfo } | { ok: false; error: string };
 
-// ─── Appearance ───────────────────────────────────────────────────────────────
-
-/** Window appearance override. 'system' follows macOS. */
-export type Appearance = 'system' | 'light' | 'dark';
-
 // ─── NHTSA recalls, bulletins and complaints ─────────────────────────────────
 
 export interface NhtsaRecall {

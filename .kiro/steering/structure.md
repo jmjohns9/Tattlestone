@@ -43,7 +43,6 @@ files/src/
 │   ├── preload.ts                # contextBridge API surface (window.electronAPI)
 │   ├── storageService.ts         # JSON (atomic, cached) + SQLite backends, migration
 │   ├── claudeAssistant.ts        # Anthropic SDK bridge, safeStorage key encryption
-│   ├── appearance.ts             # Saved System / Light / Dark override
 │   ├── assistantGrounding.ts     # Reference block for the assistant: catalog + NHTSA per code
 │   ├── nhtsa.ts                  # NHTSA recalls, bulletins, complaints (30-min cache)
 │   └── vinDecoder.ts             # Offline (corgi + vPIC db in userData) + online vPIC
@@ -73,7 +72,7 @@ files/
 ├── scripts/
 │   ├── gen-dtc-catalog.ts   # Builds the catalog from data/dtc-catalog.xlsx; writes .new unless --force
 │   ├── check-styles.mjs     # Screen style linter (npm run lint:styles)
-│   ├── capture-screens.mjs  # Light + dark screenshots of every screen
+│   ├── capture-screens.mjs  # Screenshots of every screen
 │   └── make-icon.mjs        # Placeholder app icon → build/icon.icns
 ├── build/                   # App icons for electron-builder (tracked)
 ├── assets/report.html       # PDF report template

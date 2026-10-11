@@ -30,8 +30,8 @@ Two TypeScript compilations feed one Electron process:
 macOS-native design (reference: Xcode, Instruments, Activity Monitor). Full reference: `docs/ui-styling.md`; spec: `docs/superpowers/specs/2026-09-26-macos-redesign-design.md`.
 
 - Inline React style objects + CSS custom properties. No CSS modules, Tailwind or styled-components.
-- Tokens live in `renderer/theme/theme.ts`: `LIGHT`/`DARK` palettes, `TYPE`, `WEIGHT`, `NUMERIC`, `SPACE` (4pt grid), `RADIUS` (6 / 10 / 12), `MOTION`, `STATUS_TEXT`/`STATUS_FILL`. `buildThemeCSS()` turns them into CSS variables under `prefers-color-scheme`; `index.tsx` injects them (with `theme/globalStyles.ts`) above the ErrorBoundary.
-- Appearance: the main process sets `nativeTheme.themeSource` from the saved override (`main/appearance.ts`); Settings → Theme (System / Light / Dark).
+- Tokens live in `renderer/theme/theme.ts`: `LIGHT` palette, `TYPE`, `WEIGHT`, `NUMERIC`, `SPACE` (4pt grid), `RADIUS` (6 / 10 / 12), `MOTION`, `STATUS_TEXT`/`STATUS_FILL`. `buildThemeCSS()` turns them into CSS variables under `prefers-color-scheme`; `index.tsx` injects them (with `theme/globalStyles.ts`) above the ErrorBoundary.
+- Appearance: light only. The main process pins `nativeTheme.themeSource` to `light`; there is no dark palette or theme setting.
 - Screens compose components from `components/layout/UIComponents.tsx` (implementations in `components/ui/`). Screens never set their own colours, font families, letter-spacing, text-transform or borders — enforced by `npm run lint:styles <files>`.
 - Fonts: SF Pro via `-apple-system`; SF Mono (`NUMERIC`) only for numbers, VINs, hex and PIDs. No web fonts — the app works offline, and the CSP allows no remote origins.
 - Status colour appears only for warn/crit; normal readings are neutral. Thresholds come from the PID catalog via `pidStatus()` so every screen agrees.
@@ -51,7 +51,7 @@ npm test               # node:test suites (SQLite cases skip under plain Node)
 npm run test:electron  # storage tests incl. SQLite, under Electron's runtime
 npm run lint:styles src/renderer/screens/*.tsx
 npm run gen:dtcs       # rebuild the DTC catalog from data/dtc-catalog.xlsx
-node scripts/capture-screens.mjs .screens/current   # light + dark screenshots (after build)
+node scripts/capture-screens.mjs .screens/current   # screenshots of every screen (after build)
 ```
 
 ## Testing

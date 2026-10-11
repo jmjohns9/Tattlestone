@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { PIDReading, DTCCode, ModuleState, ConnectionStatus, LogEntry, SessionSnapshot, DataRecording, FreezeFrame, StorageConfig, StorageInfo, ReportPayload, PcmReadResult, Appearance, VehicleSafetyReport, VehicleInfoResult } from '../shared/types';
+import { PIDReading, DTCCode, ModuleState, ConnectionStatus, LogEntry, SessionSnapshot, DataRecording, FreezeFrame, StorageConfig, StorageInfo, ReportPayload, PcmReadResult, VehicleSafetyReport, VehicleInfoResult } from '../shared/types';
 
 // ─── Secure IPC Bridge (contextIsolation: true) ────────────────────────────────
 // All communication between the renderer (React) and main process
@@ -25,10 +25,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readVehicleInfo: ()                            => ipcRenderer.invoke('obd:read-vehicle-info') as Promise<VehicleInfoResult>,
   exportLog:    (filename: string, text?: string) => ipcRenderer.invoke('session:export-log', { filename, text }),
   exportCSV:    (data: string, filename: string) => ipcRenderer.invoke('session:export-csv', { data, filename }),
-  getAppearance: ()                  => ipcRenderer.invoke('app:get-appearance') as Promise<Appearance>,
   getAppInfo:    ()                  => ipcRenderer.invoke('app:get-info') as Promise<{ version: string; electron: string; chrome: string; node: string }>,
   getStatus:     ()                  => ipcRenderer.invoke('obd:get-status') as Promise<{ status: ConnectionStatus; protocol?: string; adapterInfo?: string }>,
-  setAppearance: (a: Appearance)     => ipcRenderer.invoke('app:set-appearance', a) as Promise<Appearance>,
 
   // ── Claude assistant ────────────────────────────────────────────────────────
   claudeAsk:        (payload: { question: string; context: unknown; history: unknown })                  => ipcRenderer.invoke('claude:ask', payload),
