@@ -38,6 +38,7 @@ A built-in ELM327 simulator lets the whole app run offline, so you don't need a 
 ### Recalls, bulletins and a bigger code catalog
 
 - **Recalls & bulletins screen (new).** Looks up the vehicle's safety recalls, manufacturer bulletins (TSBs, GM PIs, special coverage) and owner complaints from NHTSA. Bulletins and complaints that cite a code the vehicle reported are flagged, and each bulletin's PDF opens from NHTSA. Free public-domain data, no API key.
+- **More live data and ECU identity.** 53 more standard PIDs (87 in all), including distance, time and warm-ups since codes were cleared, which shows when codes were cleared before a sale. Mode 09 calibration IDs and CVNs on the PCM identity screen work on any vehicle, and ECU refusals are logged with their ISO 14229 reason.
 - **Grounded assistant answers.** The Claude assistant answers code questions from Tellstone's catalogs and NHTSA bulletins, not from memory, and shows which sources it used.
 - **9,500+ generic fault codes.** Codes missing from the curated GMT800 catalog now fall back to [OBDex](https://github.com/foerbsnavi/OBDex) (CC0): description, likely causes ranked by likelihood, symptoms and repair effort.
 - **Offline VIN decoding.** VINs decode against a bundled copy of NHTSA's vPIC database ([corgi](https://github.com/cardog-ai/corgi)), so it works with no network. When online, the vPIC API fills in trim and transmission.
@@ -114,7 +115,8 @@ All screenshots were captured from the built-in simulator in light mode, so you 
   - Slow PIDs every 10th cycle.
 
   Commands never overlap on the serial line.
-- A 34-PID catalog with SAE J1979 decode formulas, ranges, units and plain-English descriptions.
+- An 87-PID catalog with SAE J1979 decode formulas, ranges, units and plain-English descriptions. The 53 extended PIDs (wideband O2, catalyst temperatures, rail pressures, and distance, time and warm-ups since codes were cleared) are polled a few per slow cycle, and only when the ECU confirms it supports them.
+- Refusals from the ECU are logged with their ISO 14229 reason (e.g. "Conditions not correct", NRC 0x22).
 - Sparklines of recent history on the key metrics.
 - VIN detection and decoding, offline first, which fills in the vehicle profile automatically.
 
@@ -133,6 +135,9 @@ All screenshots were captured from the built-in simulator in light mode, so you 
 - A battery voltage timeline over long sessions.
 - An interactive fuse map (interior panel and under-hood fuse/relay center), ordered by how likely each circuit is to cause a draw.
 - A step-by-step draw isolation procedure, driven by the resolved platform profile.
+
+**ECU information (any vehicle)**
+- Mode 09 calibration IDs, calibration verification numbers (CVNs) and ECU names. A CVN that differs from stock for the same calibration ID means the ECU was reprogrammed.
 
 **GM-specific**
 - Read-only PCM identity over J1850 VPW Mode 3C: VIN, hardware and software IDs, and calibration and segment info from GM P01/P59-family PCMs.

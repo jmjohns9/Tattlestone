@@ -1,15 +1,21 @@
 import { EventEmitter } from 'events';
 import { ELM327Commander } from './elm327Commander';
-import { PID_MAP, POLLING_FAST, POLLING_NORMAL, POLLING_SLOW } from './pidCatalog';
+import { PID_MAP, POLLING_FAST, POLLING_NORMAL, POLLING_SLOW, POLLING_EXTENDED } from './pidCatalog';
 import { lookupDTC } from './dtcLookup';
-import { parseDTCResponse, parsePIDData, parsePIDMessages } from './obdParsers';
-import { PIDReading, DTCCode, DTCType, DTCStatus, LogLevel } from '../shared/types';
+import {
+  parseDTCResponse, parsePIDData, parsePIDMessages, negativeResponse, describeRefusal,
+  parseMode09Support, parseMode09Text, parseCVNs,
+} from './obdParsers';
+import { PIDReading, DTCCode, DTCType, DTCStatus, LogLevel, VehicleInfo } from '../shared/types';
 
 // ─── OBDProtocolManager ───────────────────────────────────────────────────────
 //
 // The ELM327 is a single-command-at-a-time device. This manager runs a sequential
 // polling loop — one PID at a time — with priority-based scheduling.
 // Fast PIDs get polled every cycle, normal every 3rd cycle, slow every 10th.
+
+// Extended PIDs read per slow cycle; bounds how long a slow cycle can take
+const EXTENDED_BATCH = 6;
 
 export class OBDProtocolManager extends EventEmitter {
   private elm: ELM327Commander;
@@ -75,6 +81,36 @@ export class OBDProtocolManager extends EventEmitter {
       const vin = await this.elm.readVIN();
       this.log(vin ? `VIN read: ${vin}` : 'VIN not available from ECM');
       return vin;
+    });
+  }
+
+  // ── Mode 09: calibration IDs, CVNs and ECU names ─────────────────────────────
+  // All reads. A CVN is a checksum of the calibration; if it differs from the
+  // stock value for this calibration ID, the ECU has been reprogrammed.
+  async readVehicleInfo(): Promise<VehicleInfo> {
+    return this.exclusive(async () => {
+      const info: VehicleInfo = { calibrationIds: [], cvns: [], ecuNames: [], supported: null, notes: [], readAt: Date.now() };
+      const support = await this.elm.send('0900', 3000);
+      const supported = support.success ? parseMode09Support(support.raw) : null;
+      info.supported = supported ? [...supported].sort((a, b) => a - b) : null;
+
+      const items: Array<[number, string, (raw: string) => string[], keyof Pick<VehicleInfo, 'calibrationIds' | 'cvns' | 'ecuNames'>]> = [
+        [0x04, 'Calibration IDs', raw => parseMode09Text(0x04, raw, 16), 'calibrationIds'],
+        [0x06, 'Calibration verification numbers', parseCVNs, 'cvns'],
+        [0x0A, 'ECU names', raw => parseMode09Text(0x0A, raw, 20), 'ecuNames'],
+      ];
+      for (const [type, label, parse, key] of items) {
+        if (supported && !supported.has(type)) { info.notes.push(`${label}: not supported by this vehicle`); continue; }
+        const cmd = `09${hex2(type)}`;
+        // Multi-frame on J1850; CVNs can take the ECU a while to compute
+        const resp = await this.elm.send(cmd, 8000);
+        info[key] = resp.success ? parse(resp.raw) : [];
+        if (info[key].length) continue;
+        const refusal = resp.success ? negativeResponse(resp.raw, 0x09) : null;
+        info.notes.push(`${label}: ${refusal ? describeRefusal(refusal) : 'no answer'}`);
+      }
+      this.log(`Vehicle info read — ${info.calibrationIds.length} calibration IDs, ${info.cvns.length} CVNs, ${info.ecuNames.length} ECU names`);
+      return info;
     });
   }
 
@@ -166,9 +202,10 @@ export class OBDProtocolManager extends EventEmitter {
           await this.pollPIDList(POLLING_NORMAL);
         }
 
-        // 4. Slow PIDs — every 10th cycle
+        // 4. Slow PIDs — every 10th cycle, plus the next few extended PIDs
         if (this.cycleCount % 10 === 0) {
           await this.pollPIDList(POLLING_SLOW);
+          await this.pollPIDList(this.nextExtendedBatch());
         }
 
         this.cycleCount++;
@@ -183,6 +220,21 @@ export class OBDProtocolManager extends EventEmitter {
     }
 
     this.pollLoopRunning = false;
+  }
+
+  // Extended PIDs go round-robin, EXTENDED_BATCH per slow cycle, and only the
+  // ones discovery confirmed: unlike the core tiers, "unknown" isn't polled.
+  private extendedCursor = 0;
+  private refusalLogged = new Set<string>();
+  private nextExtendedBatch(): string[] {
+    const supported = POLLING_EXTENDED.filter(pid => this.supportedPIDs.has(pid));
+    if (supported.length === 0) return [];
+    const batch: string[] = [];
+    for (let i = 0; i < Math.min(EXTENDED_BATCH, supported.length); i++) {
+      batch.push(supported[(this.extendedCursor + i) % supported.length]);
+    }
+    this.extendedCursor = (this.extendedCursor + batch.length) % supported.length;
+    return batch;
   }
 
   // ── Poll battery voltage (ATRV — AT command, not an OBD PID) ─────────────────
@@ -229,7 +281,15 @@ export class OBDProtocolManager extends EventEmitter {
       if (resp.raw.includes('NO DATA') || resp.raw.includes('UNABLE TO CONNECT')) return;
 
       const bytes = parsePIDData(pid, resp.raw);
-      if (!bytes) return;
+      if (!bytes) {
+        // Logged once per PID: the loop asks again every few seconds
+        const refusal = negativeResponse(resp.raw, 0x01);
+        if (refusal && !this.refusalLogged.has(pid)) {
+          this.refusalLogged.add(pid);
+          this.log(`PID ${pid} ${describeRefusal(refusal)}`, 'warn');
+        }
+        return;
+      }
 
       const value = definition.decode(bytes);
 
@@ -271,6 +331,8 @@ export class OBDProtocolManager extends EventEmitter {
     for (const { mode, status } of modes) {
       const resp = await this.elm.send(mode, 5000);
       const parsed = parseDTCResponse(mode, resp.success ? resp.raw : '');
+      const refusal = resp.success ? negativeResponse(resp.raw, parseInt(mode, 16)) : null;
+      if (refusal) this.log(`DTC scan mode ${mode} ${describeRefusal(refusal)}`);
       if (!parsed.ok) {
         failed.push(mode);
         this.log(`DTC scan mode ${mode} got no answer: ${resp.errorMessage ?? (resp.raw.trim() || 'timeout')}`, 'warn');

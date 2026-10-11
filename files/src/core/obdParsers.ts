@@ -50,6 +50,74 @@ export function responseMessages(raw: string): Message[] {
 // it means the bus worked and no ECU had anything to report.
 const FAILURE = /UNABLE TO CONNECT|BUS ERROR|CAN ERROR|BUS BUSY|STOPPED|FB ERROR|DATA ERROR|BUFFER FULL|ERROR|^\?$/m;
 
+// ── Negative responses ───────────────────────────────────────────────────────
+// An ECU that refuses a request answers 7F <service> … <code>. On CAN the code
+// is the third byte; GM Class 2 echoes the request first, so the code is always
+// the last byte. Names follow ISO 14229-1 (UDS), which shares 0x10–0x37 and
+// 0x78 with ISO 14230 (KWP2000).
+
+export const NRC_NAMES: Readonly<Record<number, string>> = {
+  0x10: 'General reject',
+  0x11: 'Service not supported',
+  0x12: 'Sub-function not supported',
+  0x13: 'Incorrect message length or format',
+  0x14: 'Response too long',
+  0x21: 'Busy, repeat request',
+  0x22: 'Conditions not correct',
+  0x24: 'Request sequence error',
+  0x25: 'No response from sub-net component',
+  0x26: 'Failure prevents execution of requested action',
+  0x31: 'Request out of range',
+  0x33: 'Security access denied',
+  0x35: 'Invalid key',
+  0x36: 'Exceeded number of attempts',
+  0x37: 'Required time delay not expired',
+  0x70: 'Upload/download not accepted',
+  0x71: 'Transfer data suspended',
+  0x72: 'General programming failure',
+  0x73: 'Wrong block sequence counter',
+  0x78: 'Request received, response pending',
+  0x7E: 'Sub-function not supported in active session',
+  0x7F: 'Service not supported in active session',
+  0x81: 'RPM too high',
+  0x82: 'RPM too low',
+  0x83: 'Engine is running',
+  0x84: 'Engine is not running',
+  0x85: 'Engine run time too low',
+  0x86: 'Temperature too high',
+  0x87: 'Temperature too low',
+  0x88: 'Vehicle speed too high',
+  0x89: 'Vehicle speed too low',
+  0x8A: 'Throttle/pedal too high',
+  0x8B: 'Throttle/pedal too low',
+  0x8C: 'Transmission range not in neutral',
+  0x8D: 'Transmission range not in gear',
+  0x8F: 'Brake switch not closed',
+  0x90: 'Shifter lever not in park',
+  0x91: 'Torque converter clutch locked',
+  0x92: 'Voltage too high',
+  0x93: 'Voltage too low',
+};
+
+export function nrcName(nrc: number): string {
+  return NRC_NAMES[nrc] ?? (nrc >= 0x94 && nrc <= 0xEF ? 'Manufacturer-specific condition not correct'
+    : nrc >= 0xF0 && nrc <= 0xFE ? 'Manufacturer-specific code' : 'Unknown code');
+}
+
+export interface NegativeResponse { service: number; nrc: number; name: string }
+
+/** The first refusal of `service` in a reply, or null if no ECU refused it. */
+export function negativeResponse(raw: string, service: number): NegativeResponse | null {
+  const m = responseMessages(raw).find(x => x.length >= 3 && x[0] === 0x7F && x[1] === service);
+  if (!m) return null;
+  const nrc = m[m.length - 1];
+  return { service, nrc, name: nrcName(nrc) };
+}
+
+/** e.g. "refused: Conditions not correct (NRC 0x22)" */
+export const describeRefusal = (n: NegativeResponse): string =>
+  `refused: ${n.name} (NRC 0x${n.nrc.toString(16).toUpperCase().padStart(2, '0')})`;
+
 // ── DTCs: Mode 03 (stored), 07 (pending), 0A (permanent) ─────────────────────
 
 const DTC_TYPES = ['P', 'C', 'B', 'U'] as const;
@@ -110,6 +178,74 @@ export function parseVIN(raw: string): string | null {
 
   const vin = bytes.filter(b => b !== 0).map(b => String.fromCharCode(b)).join('').slice(-17);
   return VIN_PATTERN.test(vin) ? vin : null;
+}
+
+// ── Mode 09 vehicle information ──────────────────────────────────────────────
+// J1850 / ISO 9141 answer in 7-byte frames, 49 <type> <seq> + 4 bytes, with the
+// sequence restarting at 1 for each ECU. CAN answers one reassembled message
+// per ECU, 49 <type> <item count> + data.
+
+/** Data bytes of one Mode 09 info type, one array per answering ECU. */
+export function mode09Payloads(type: number, raw: string): number[][] {
+  const replies = responseMessages(raw).filter(m => m.length > 3 && m[0] === 0x49 && m[1] === type);
+  const out: number[][] = [];
+  let group: number[][] = [];
+  const flush = () => {
+    if (group.length) out.push([...group].sort((a, b) => a[2] - b[2]).flatMap(m => m.slice(3)));
+    group = [];
+  };
+  for (const m of replies) {
+    if (m.length === 7) {
+      // A sequence number seen again starts the next ECU's reply; frames
+      // merely arriving out of order stay together and are sorted
+      if (group.some(g => g[2] === m[2])) flush();
+      group.push(m);
+    } else {
+      flush();
+      out.push(m.slice(3));
+    }
+  }
+  flush();
+  return out;
+}
+
+const ascii = (bytes: number[]): string =>
+  bytes.filter(b => b >= 0x20 && b < 0x7F).map(b => String.fromCharCode(b)).join('').trim();
+
+/** Fixed-width text items: calibration IDs (16 chars), ECU names (20 chars). */
+export function parseMode09Text(type: number, raw: string, width: number): string[] {
+  const items: string[] = [];
+  for (const bytes of mode09Payloads(type, raw)) {
+    for (let i = 0; i < bytes.length; i += width) {
+      const text = ascii(bytes.slice(i, i + width));
+      if (text) items.push(text);
+    }
+  }
+  return items;
+}
+
+/** Calibration verification numbers: 4 bytes each, shown as hex. */
+export function parseCVNs(raw: string): string[] {
+  const out: string[] = [];
+  for (const bytes of mode09Payloads(0x06, raw)) {
+    for (let i = 0; i + 3 < bytes.length; i += 4) {
+      out.push(bytes.slice(i, i + 4).map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(''));
+    }
+  }
+  return out;
+}
+
+/** Info types 01–20 the ECUs report as supported (0900), or null if none answered. */
+export function parseMode09Support(raw: string): Set<number> | null {
+  const masks = responseMessages(raw).filter(m => m.length >= 6 && m[0] === 0x49 && m[1] === 0x00)
+    .map(m => (m.length === 7 ? m.slice(3) : m.slice(2, 6)));
+  if (!masks.length) return null;
+  const set = new Set<number>();
+  for (const b of masks) {
+    const mask = ((b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]) >>> 0;
+    for (let bit = 0; bit < 32; bit++) if (mask & (1 << (31 - bit))) set.add(bit + 1);
+  }
+  return set;
 }
 
 // ── Mode 01 PIDs ──────────────────────────────────────────────────────────────

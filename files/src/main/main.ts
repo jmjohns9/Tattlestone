@@ -6,7 +6,7 @@ import { execFile } from 'child_process';
 import { ELM327Commander } from '../core/elm327Commander';
 import { ELM327Simulator } from '../core/elm327Simulator';
 import { OBDProtocolManager } from '../core/obdProtocolManager';
-import { PIDReading, ConnectionStatus, LogEntry, PcmReadResult, VehicleSafetyReport } from '../shared/types';
+import { PIDReading, ConnectionStatus, LogEntry, PcmReadResult, VehicleSafetyReport, VehicleInfoResult } from '../shared/types';
 import { PcmDiagnostics } from '../core/pcmDiagnostics';
 import { GMT800 } from '../core/platforms/gmt800';
 import { askClaude, loadConfig as loadClaudeConfig, saveConfig as saveClaudeConfig, SessionContext, ChatTurn, CLAUDE_MODELS, DEFAULT_SYSTEM_PROMPT } from './claudeAssistant';
@@ -563,6 +563,17 @@ handle('pcm:read-ids', async (): Promise<PcmReadResult> => {
     }
   };
   return obd ? obd.exclusive(run) : run();
+});
+
+// Mode 09 calibration IDs, CVNs and ECU names: standard OBD-II reads that
+// work on any vehicle, so the simulator answers them too.
+handle('obd:read-vehicle-info', async (): Promise<VehicleInfoResult> => {
+  if (!obd) return { ok: false, error: 'Not connected to an adapter.' };
+  try {
+    return { ok: true, info: await obd.readVehicleInfo() };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
 });
 
 handle('obd:check-modules', async () => {

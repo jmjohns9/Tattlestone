@@ -519,7 +519,166 @@ export const PID_CATALOG: PIDDefinition[] = [
     decode: pct1,
     format: (v) => `${v}%`,
   },
+
+  ...extendedPIDs(),
 ];
+
+// ─── Extended PIDs (SAE J1979) ────────────────────────────────────────────────
+// Polled only when the ECU reports them as supported (see POLLING_EXTENDED).
+// Formulas are from SAE J1979; units follow the rest of the catalog (°F, psi).
+
+function extendedPIDs(): PIDDefinition[] {
+  const u16 = (b: number[]) => b[0] * 256 + b[1];
+  const s16 = (b: number[]) => { const n = u16(b); return n >= 0x8000 ? n - 0x10000 : n; };
+  const lambda = (b: number[]) => parseFloat(((2 / 65536) * u16(b)).toFixed(3));
+  const catF = (b: number[]) => parseFloat(((u16(b) / 10 - 40) * 9 / 5 + 32).toFixed(0));
+  const kpaToPsi = (kpa: number) => parseFloat((kpa * 0.14504).toFixed(1));
+  const signedPct = (n: number) => `${n > 0 ? '+' : ''}${n}%`;
+  const km = (v: number | string) => `${v} km (${Math.round((v as number) * 0.621371)} mi)`;
+  const minutes = (v: number | string) => {
+    const n = v as number;
+    return n < 60 ? `${n} min` : `${Math.floor(n / 60)} h ${n % 60} min`;
+  };
+
+  const out: PIDDefinition[] = [];
+  const add = (d: Omit<PIDDefinition, 'min' | 'max'> & { min?: number; max?: number }) =>
+    out.push({ min: 0, max: 100, ...d });
+
+  // ── Since codes were cleared: shows a recent clear before a sale ──────────
+  add({ pid: '0130', name: 'Warm-ups Since Codes Cleared', shortName: 'Warm-ups', category: 'emissions', unit: '', max: 255,
+    formula: 'byte A', description: 'Engine warm-up cycles since the fault codes were last cleared. A low count on a used vehicle means the codes were cleared recently.',
+    decode: (b) => b[0], format: (v) => `${v}` });
+  add({ pid: '0131', name: 'Distance Since Codes Cleared', shortName: 'Dist Cleared', category: 'emissions', unit: 'km', max: 65535,
+    formula: '(byte A × 256) + byte B', description: 'Distance driven since the fault codes were last cleared. A short distance on a used vehicle means the codes were cleared recently.',
+    decode: u16, format: km });
+  add({ pid: '014E', name: 'Time Since Codes Cleared', shortName: 'Time Cleared', category: 'emissions', unit: 'min', max: 65535,
+    formula: '(byte A × 256) + byte B', description: 'Engine run time since the fault codes were last cleared.',
+    decode: u16, format: minutes });
+  add({ pid: '0121', name: 'Distance Traveled With Check Engine Light On', shortName: 'Dist MIL On', category: 'emissions', unit: 'km', max: 65535,
+    formula: '(byte A × 256) + byte B', description: 'Distance driven since the check-engine light came on.',
+    decode: u16, format: km });
+  add({ pid: '014D', name: 'Time Run With Check Engine Light On', shortName: 'Time MIL On', category: 'emissions', unit: 'min', max: 65535,
+    formula: '(byte A × 256) + byte B', description: 'Engine run time since the check-engine light came on.',
+    decode: u16, format: minutes });
+  add({ pid: '011F', name: 'Run Time Since Engine Start', shortName: 'Run Time', category: 'engine', unit: 's', max: 65535,
+    formula: '(byte A × 256) + byte B', description: 'Seconds since the engine was started.',
+    decode: u16, format: (v) => { const n = v as number; return n < 60 ? `${n} s` : `${minutes(Math.floor(n / 60))} ${n % 60} s`; } });
+
+  // ── Vehicle and fuel ──────────────────────────────────────────────────────
+  const OBD_STANDARDS: Record<number, string> = {
+    1: 'OBD-II (CARB)', 2: 'OBD (EPA)', 3: 'OBD and OBD-II', 4: 'OBD-I', 5: 'Not OBD compliant', 6: 'EOBD (Europe)',
+    7: 'EOBD and OBD-II', 8: 'EOBD and OBD', 9: 'EOBD, OBD and OBD-II', 10: 'JOBD (Japan)', 11: 'JOBD and OBD-II',
+    12: 'JOBD and EOBD', 13: 'JOBD, EOBD and OBD-II', 17: 'Engine Manufacturer Diagnostics (EMD)', 18: 'EMD+',
+    19: 'Heavy Duty OBD (Child/Partial)', 20: 'Heavy Duty OBD', 21: 'World Wide Harmonized OBD', 23: 'Heavy Duty EOBD Stage I without NOx control',
+    24: 'Heavy Duty EOBD Stage I with NOx control', 25: 'Heavy Duty EOBD Stage II without NOx control', 26: 'Heavy Duty EOBD Stage II with NOx control',
+    28: 'Brazil OBD Phase 1', 29: 'Brazil OBD Phase 2', 30: 'Korean OBD', 31: 'India OBD I', 32: 'India OBD II', 33: 'Heavy Duty EOBD Stage VI',
+  };
+  add({ pid: '011C', name: 'OBD Standard This Vehicle Conforms To', shortName: 'OBD Std', category: 'emissions', unit: '', max: 255,
+    formula: 'byte A (enumerated)', description: 'Which on-board diagnostics standard the engine computer was certified to.',
+    decode: (b) => b[0], format: (v) => OBD_STANDARDS[v as number] ?? `Type ${v}` });
+  const FUEL_TYPES = ['Not available', 'Gasoline', 'Methanol', 'Ethanol', 'Diesel', 'LPG', 'CNG', 'Propane', 'Electric',
+    'Bifuel: gasoline', 'Bifuel: methanol', 'Bifuel: ethanol', 'Bifuel: LPG', 'Bifuel: CNG', 'Bifuel: propane', 'Bifuel: electricity',
+    'Bifuel: electric and combustion', 'Hybrid gasoline', 'Hybrid ethanol', 'Hybrid diesel', 'Hybrid electric',
+    'Hybrid: electric and combustion', 'Hybrid regenerative', 'Bifuel: diesel'];
+  add({ pid: '0151', name: 'Fuel Type', shortName: 'Fuel Type', category: 'fuel', unit: '', max: 255,
+    formula: 'byte A (enumerated)', description: 'The fuel the engine is set up to run on.',
+    decode: (b) => b[0], format: (v) => FUEL_TYPES[v as number] ?? `Type ${v}` });
+  add({ pid: '0152', name: 'Ethanol Fuel Percentage', shortName: 'Ethanol', category: 'fuel', unit: '%',
+    formula: '(byte A ÷ 255) × 100', description: 'Ethanol content of the fuel as measured by a flex-fuel sensor.',
+    decode: pct1, format: (v) => `${v}%` });
+  add({ pid: '010A', name: 'Fuel Pressure (Gauge)', shortName: 'Fuel Press', category: 'fuel', unit: 'psi', max: 111,
+    formula: '3 × byte A kPa', description: 'Fuel pressure above atmospheric, on engines that report it.',
+    decode: (b) => kpaToPsi(3 * b[0]), format: (v) => `${v} psi` });
+  add({ pid: '0122', name: 'Fuel Rail Pressure (Relative to Manifold Vacuum)', shortName: 'Rail Rel', category: 'fuel', unit: 'psi', max: 750,
+    formula: '0.079 × ((A × 256) + B) kPa', description: 'Fuel rail pressure relative to intake manifold vacuum.',
+    decode: (b) => kpaToPsi(0.079 * u16(b)), format: (v) => `${v} psi` });
+  add({ pid: '0159', name: 'Fuel Rail Absolute Pressure', shortName: 'Rail Abs', category: 'fuel', unit: 'psi', max: 95052,
+    formula: '10 × ((A × 256) + B) kPa', description: 'Absolute fuel rail pressure, mostly reported by direct-injection and diesel engines.',
+    decode: (b) => kpaToPsi(10 * u16(b)), format: (v) => `${v} psi` });
+  add({ pid: '0144', name: 'Commanded Air-Fuel Equivalence Ratio (Lambda)', shortName: 'Cmd λ', category: 'fuel', unit: 'λ', max: 2,
+    formula: '(2 ÷ 65536) × ((A × 256) + B)', description: 'Air-fuel ratio the engine computer is aiming for, as lambda. 1.00 is stoichiometric; below 1 is rich.',
+    decode: lambda, format: (v) => `λ ${v}` });
+
+  // ── Evaporative system ────────────────────────────────────────────────────
+  add({ pid: '0132', name: 'Evaporative System Vapor Pressure', shortName: 'EVAP Press', category: 'emissions', unit: 'Pa', min: -8192, max: 8192,
+    formula: 'signed((A × 256) + B) ÷ 4', description: 'Fuel tank vapor pressure used by the evaporative leak test.',
+    decode: (b) => s16(b) / 4, format: (v) => `${v} Pa` });
+  add({ pid: '0153', name: 'Absolute Evaporative System Vapor Pressure', shortName: 'EVAP Abs', category: 'emissions', unit: 'kPa', max: 328,
+    formula: '((A × 256) + B) ÷ 200', description: 'Absolute fuel tank vapor pressure.',
+    decode: (b) => parseFloat((u16(b) / 200).toFixed(2)), format: (v) => `${v} kPa` });
+  add({ pid: '0154', name: 'Evaporative System Vapor Pressure (Wide Range)', shortName: 'EVAP Wide', category: 'emissions', unit: 'Pa', min: -32767, max: 32768,
+    formula: '((A × 256) + B) − 32767', description: 'Fuel tank vapor pressure over a wider range than PID 32.',
+    decode: (b) => u16(b) - 32767, format: (v) => `${v} Pa` });
+
+  // ── Secondary air and auxiliary input ─────────────────────────────────────
+  const AIR: Record<number, string> = { 1: 'Upstream of catalyst', 2: 'Downstream of catalyst', 4: 'From outside atmosphere or off', 8: 'Pump on for diagnostics' };
+  add({ pid: '0112', name: 'Commanded Secondary Air Status', shortName: 'Sec Air', category: 'emissions', unit: '', max: 255,
+    formula: 'byte A (one bit set)', description: 'Where the secondary air injection pump is sending air, on engines that have one.',
+    decode: (b) => b[0], format: (v) => AIR[v as number] ?? `Status ${v}` });
+  add({ pid: '011E', name: 'Auxiliary Input Status (Power Take-Off)', shortName: 'PTO', category: 'engine', unit: '', max: 1,
+    formula: 'bit 0 of byte A', description: 'Whether power take-off is engaged.',
+    decode: (b) => b[0] & 1, format: (v) => (v ? 'PTO active' : 'PTO off') });
+
+  // ── Throttle and pedal ────────────────────────────────────────────────────
+  for (const [pid, name, short] of [
+    ['0148', 'Absolute Throttle Position C', 'Throttle C'],
+    ['0149', 'Accelerator Pedal Position D', 'Pedal D'],
+    ['014A', 'Accelerator Pedal Position E', 'Pedal E'],
+    ['014B', 'Accelerator Pedal Position F', 'Pedal F'],
+    ['014C', 'Commanded Throttle Actuator', 'Throttle Cmd'],
+    ['015A', 'Relative Accelerator Pedal Position', 'Pedal Rel'],
+  ] as const) {
+    add({ pid, name, shortName: short, category: 'engine', unit: '%', formula: '(byte A ÷ 255) × 100',
+      description: 'Position reported by drive-by-wire throttle and pedal sensors.', decode: pct1, format: (v) => `${v}%` });
+  }
+  add({ pid: '015B', name: 'Hybrid Battery Pack Remaining Life', shortName: 'Hybrid Batt', category: 'electrical', unit: '%',
+    formula: '(byte A ÷ 255) × 100', description: 'State of charge of the hybrid battery pack.',
+    decode: pct1, format: (v) => `${v}%` });
+
+  // ── Oxygen sensors: narrowband sensors 3 and 4 ────────────────────────────
+  for (const [pid, where] of [['0116', 'Bank 1 Sensor 3'], ['0117', 'Bank 1 Sensor 4'], ['011A', 'Bank 2 Sensor 3'], ['011B', 'Bank 2 Sensor 4']] as const) {
+    add({ pid, name: `Oxygen Sensor Voltage — ${where}`, shortName: `O2 ${where.replace('Bank ', 'B').replace(' Sensor ', 'S')}`,
+      category: 'oxygen_sensors', unit: 'V', max: 1.275, formula: 'byte A ÷ 200',
+      description: 'Narrowband oxygen sensor voltage. Switching between about 0.1 V and 0.9 V is normal for an upstream sensor.',
+      decode: o2v, format: (v) => `${v} V` });
+  }
+
+  // ── Oxygen sensors: wideband (lambda) ─────────────────────────────────────
+  const WIDEBAND = ['Bank 1 Sensor 1', 'Bank 1 Sensor 2', 'Bank 1 Sensor 3', 'Bank 1 Sensor 4', 'Bank 2 Sensor 1', 'Bank 2 Sensor 2', 'Bank 2 Sensor 3', 'Bank 2 Sensor 4'];
+  WIDEBAND.forEach((where, i) => {
+    const short = `λ ${where.replace('Bank ', 'B').replace(' Sensor ', 'S')}`;
+    add({ pid: `01${(0x24 + i).toString(16).toUpperCase()}`, name: `Wideband Oxygen Sensor Lambda (Voltage Type) — ${where}`, shortName: short,
+      category: 'oxygen_sensors', unit: 'λ', max: 2, formula: '(2 ÷ 65536) × ((A × 256) + B); C, D = sensor voltage',
+      description: 'Air-fuel equivalence ratio measured by a wideband sensor. 1.00 is stoichiometric; below 1 is rich. Sensor numbering assumes the two-bank layout.',
+      decode: lambda, format: (v) => `λ ${v}` });
+    add({ pid: `01${(0x34 + i).toString(16).toUpperCase()}`, name: `Wideband Oxygen Sensor Lambda (Current Type) — ${where}`, shortName: short,
+      category: 'oxygen_sensors', unit: 'λ', max: 2, formula: '(2 ÷ 65536) × ((A × 256) + B); C, D = sensor current',
+      description: 'Air-fuel equivalence ratio measured by a wideband sensor. 1.00 is stoichiometric; below 1 is rich. Sensor numbering assumes the two-bank layout.',
+      decode: lambda, format: (v) => `λ ${v}` });
+  });
+
+  // ── Secondary oxygen sensor fuel trims ────────────────────────────────────
+  for (const [pid, name, short] of [
+    ['0155', 'Short-Term Secondary O2 Sensor Trim — Bank 1', 'STFT2 B1'],
+    ['0156', 'Long-Term Secondary O2 Sensor Trim — Bank 1', 'LTFT2 B1'],
+    ['0157', 'Short-Term Secondary O2 Sensor Trim — Bank 2', 'STFT2 B2'],
+    ['0158', 'Long-Term Secondary O2 Sensor Trim — Bank 2', 'LTFT2 B2'],
+  ] as const) {
+    add({ pid, name, shortName: short, category: 'fuel', unit: '%', min: -100, max: 99.2,
+      formula: '((byte A − 128) ÷ 128) × 100 (byte B = bank 3 or 4)',
+      description: 'Fuel trim correction from the downstream oxygen sensor.', decode: trim, format: (v) => signedPct(v as number) });
+  }
+
+  // ── Catalyst temperatures ─────────────────────────────────────────────────
+  for (const [pid, where] of [['013C', 'Bank 1 Sensor 1'], ['013D', 'Bank 2 Sensor 1'], ['013E', 'Bank 1 Sensor 2'], ['013F', 'Bank 2 Sensor 2']] as const) {
+    add({ pid, name: `Catalyst Temperature — ${where}`, shortName: `Cat ${where.replace('Bank ', 'B').replace(' Sensor ', 'S')}`,
+      category: 'temperature', unit: '°F', min: -40, max: 11796, formula: '((A × 256) + B) ÷ 10 − 40 °C',
+      description: 'Catalytic converter temperature, measured or modelled by the engine computer.',
+      decode: catF, format: (v) => `${v} °F`, warnHigh: 1600 });
+  }
+
+  return out;
+}
 
 // ─── Lookup by PID string ──────────────────────────────────────────────────────
 
@@ -534,3 +693,8 @@ export const PID_MAP: Map<string, PIDDefinition> = new Map(
 export const POLLING_FAST   = ['010C', '0142'];  // battery voltage (ATRV) is polled separately every cycle
 export const POLLING_NORMAL = ['010D', '0105', '0104', '0111', '010F', '0110', '010B', '0106', '0107', '0108', '0109', '0114', '0115', '0118', '0119'];
 export const POLLING_SLOW   = ['012F', '015C', '0123', '015E', '0133', '010E', '0143', '0146', '012C', '012D', '012E', '01A4', '0103', '0101'];
+
+// Every other catalog PID. Polled a few at a time on slow cycles, and only when
+// PID discovery confirmed the ECU supports it, so unsupported ones cost nothing.
+export const POLLING_EXTENDED = PID_CATALOG.map(p => p.pid)
+  .filter(pid => ![...POLLING_FAST, ...POLLING_NORMAL, ...POLLING_SLOW].includes(pid));

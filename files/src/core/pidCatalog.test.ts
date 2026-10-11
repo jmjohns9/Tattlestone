@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PID_CATALOG, PID_MAP, POLLING_FAST, POLLING_NORMAL, POLLING_SLOW } from './pidCatalog';
+import { PID_CATALOG, PID_MAP, POLLING_FAST, POLLING_NORMAL, POLLING_SLOW, POLLING_EXTENDED } from './pidCatalog';
 
 const decode = (pid: string, bytes: number[]) => PID_MAP.get(pid)!.decode(bytes);
 const format = (pid: string, bytes: number[]) => PID_MAP.get(pid)!.format(decode(pid, bytes));
@@ -64,4 +64,41 @@ test('Bank 1 is the cylinder-1 side, never called the right side', () => {
   for (const pid of ['0106', '0107']) assert.doesNotMatch(PID_MAP.get(pid)!.name, /right/i);
   for (const pid of ['0108', '0109']) assert.doesNotMatch(PID_MAP.get(pid)!.name, /left/i);
   assert.doesNotMatch(PID_MAP.get('0118')!.description, /driver/i);
+});
+
+// Extended PIDs (SAE J1979 worked values)
+const extended: Array<[string, number[], number]> = [
+  ['0130', [0x26], 38],                // warm-ups since codes cleared, A
+  ['0131', [0x02, 0x82], 642],         // km since codes cleared, 256A+B
+  ['014E', [0x01, 0x2C], 300],         // minutes since codes cleared
+  ['0144', [0x80, 0x00], 1],           // commanded lambda, 2/65536·(256A+B)
+  ['0124', [0x73, 0x33, 0x80, 0x00], 0.9],
+  ['013C', [0x11, 0x94], 770],         // catalyst: (256A+B)/10 − 40 = 410 °C = 770 °F
+  ['010A', [0x64], 43.5],              // 3A kPa → psi
+  ['0159', [0x00, 0x64], 145],         // 10·(256A+B) kPa → psi
+  ['0132', [0xFF, 0x9C], -25],         // signed (256A+B)/4 Pa
+  ['0154', [0x80, 0x00], 1],           // (256A+B) − 32767 Pa
+  ['0152', [0xFF], 100],               // ethanol %
+];
+for (const [pid, bytes, expected] of extended) {
+  test(`${pid} decodes ${bytes.map(b => b.toString(16).padStart(2, '0')).join(' ')} as ${expected}`, () => {
+    assert.equal(decode(pid, bytes), expected);
+  });
+}
+
+test('extended enumerations and durations format for people', () => {
+  assert.equal(format('011C', [0x01]), 'OBD-II (CARB)');
+  assert.equal(format('0151', [0x01]), 'Gasoline');
+  assert.equal(format('0151', [0xEE]), 'Type 238');
+  assert.equal(format('0131', [0x02, 0x82]), '642 km (399 mi)');
+  assert.equal(format('014E', [0x00, 0x2A]), '42 min');
+  assert.equal(format('014E', [0x01, 0x2C]), '5 h 0 min');
+  assert.equal(format('011F', [0x00, 0x2A]), '42 s');
+  assert.equal(format('011F', [0x0E, 0x1F]), '1 h 0 min 15 s');
+});
+
+test('every catalog PID outside the core tiers is in the extended tier', () => {
+  const tiers = new Set([...POLLING_FAST, ...POLLING_NORMAL, ...POLLING_SLOW, ...POLLING_EXTENDED]);
+  for (const p of PID_CATALOG) assert.ok(tiers.has(p.pid), p.pid);
+  assert.equal(POLLING_EXTENDED.filter(p => POLLING_SLOW.includes(p)).length, 0);
 });

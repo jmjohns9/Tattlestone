@@ -142,3 +142,43 @@ test('exclusive operations run one at a time', async () => {
   await Promise.all([op('a'), op('b')]);
   assert.deepEqual(order, ['a+', 'a-', 'b+', 'b-']);
 });
+
+test('extended PIDs are polled only when supported, a batch at a time, round-robin', () => {
+  const { mgr } = scriptedManager({});
+  const m = mgr as unknown as { supportedPIDs: Set<string>; nextExtendedBatch: () => string[] };
+  assert.deepEqual(m.nextExtendedBatch(), [], 'nothing confirmed, nothing polled');
+  const supported = ['0130', '0131', '014E', '0121', '011F', '011C', '0151', '013C'];
+  m.supportedPIDs = new Set(['010C', ...supported]);
+  const first = m.nextExtendedBatch();
+  const second = m.nextExtendedBatch();
+  assert.equal(first.length, 6);
+  assert.ok([...first, ...second].every(p => supported.includes(p)));
+  assert.deepEqual(new Set([...first, ...second]), new Set(supported), 'every supported PID gets its turn');
+});
+
+test('a refused PID is logged once with the reason', async () => {
+  const { mgr } = scriptedManager({ '0131': '7F0112' });
+  const logs: string[] = [];
+  mgr.on('log', e => logs.push(e.message));
+  const poll = (mgr as unknown as { pollSinglePID: (p: string) => Promise<void> }).pollSinglePID.bind(mgr);
+  await poll('0131');
+  await poll('0131');
+  assert.deepEqual(logs.filter(l => l.includes('0131')), ['PID 0131 refused: Sub-function not supported (NRC 0x12)']);
+});
+
+test('Mode 09 read skips unsupported types and explains what is missing', async () => {
+  const { mgr, writes } = scriptedManager({
+    '0900': '49000154000000',                               // 02, 04, 06
+    '0904': '49040131323539\r49040232363138\r49040300000000\r49040400000000',
+    '0906': '7F0922',
+  });
+  const info = await mgr.readVehicleInfo();
+  assert.deepEqual(writes, ['0900', '0904', '0906']);
+  assert.deepEqual(info.calibrationIds, ['12592618']);
+  assert.deepEqual(info.cvns, []);
+  assert.deepEqual(info.supported, [2, 4, 6]);
+  assert.deepEqual(info.notes, [
+    'Calibration verification numbers: refused: Conditions not correct (NRC 0x22)',
+    'ECU names: not supported by this vehicle',
+  ]);
+});

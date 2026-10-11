@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAppStore } from '../store/appStore';
 import { ScrollPane, SectionHeader, Card, Badge, AlertBanner, Button, DataRow } from '../components/layout/UIComponents';
 import { TYPE, NUMERIC } from '../theme/theme';
-import { PcmField, PcmFieldGroup, PcmIdentity } from '../../shared/types';
+import { PcmField, PcmFieldGroup, PcmIdentity, VehicleInfo } from '../../shared/types';
 
 // ─── PCM diagnostics ──────────────────────────────────────────────────────────
 //
@@ -41,6 +41,67 @@ function FieldRow({ field }: { field: PcmField }): React.ReactElement {
         onClick={field.supported && field.raw ? () => setShowRaw(v => !v) : undefined}
       />
     </div>
+  );
+}
+
+// ─── OBD-II ECU information (Mode 09) — any vehicle ──────────────────────────
+
+// Kept across screen switches
+let lastVehicleInfo: VehicleInfo | null = null;
+
+function VehicleInfoSection({ isConnected }: { isConnected: boolean }): React.ReactElement {
+  const [info,    setInfo]    = useState<VehicleInfo | null>(lastVehicleInfo);
+  const [reading, setReading] = useState(false);
+  const [error,   setError]   = useState<string | null>(null);
+
+  const read = async () => {
+    setReading(true);
+    setError(null);
+    try {
+      const res = await window.electronAPI.readVehicleInfo();
+      if (res.ok) { lastVehicleInfo = res.info; setInfo(res.info); } else setError(res.error);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setReading(false);
+    }
+  };
+
+  const rows = info ? [
+    ...info.ecuNames.map((v, i) => ({ key: `n${i}`, name: info.ecuNames.length > 1 ? `ECU name ${i + 1}` : 'ECU name', value: v })),
+    ...info.calibrationIds.map((v, i) => ({ key: `c${i}`, name: `Calibration ID ${i + 1}`, value: v })),
+    ...info.cvns.map((v, i) => ({ key: `v${i}`, name: `CVN ${i + 1}`, value: v })),
+  ] : [];
+
+  return (
+    <>
+      <SectionHeader>OBD-II ECU information</SectionHeader>
+      <Card>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <Button icon="ti-download" disabled={!isConnected || reading} onClick={read}>
+            {reading ? 'Reading…' : info ? 'Re-read' : 'Read calibration IDs'}
+          </Button>
+          {info && !reading && (
+            <span style={{ ...TYPE.caption, color: 'var(--label-2)' }}>read {new Date(info.readAt).toLocaleTimeString()}</span>
+          )}
+        </div>
+        <p style={{ margin: '8px 0 0', ...TYPE.caption, color: 'var(--label-2)' }}>
+          Standard Mode 09 reads that work on any OBD-II vehicle. A calibration verification number (CVN) is a checksum of
+          the ECU software: if it differs from the stock CVN for the same calibration ID, the ECU has been reprogrammed or tuned.
+        </p>
+      </Card>
+      {error && <AlertBanner variant="crit" message={error} />}
+      {info && (
+        <Card padding={0}>
+          {rows.length
+            ? rows.map(r => <DataRow key={r.key} name={r.name} value={r.value} />)
+            : <p style={{ margin: 0, padding: '8px 12px', ...TYPE.body, color: 'var(--label-2)' }}>The vehicle returned no calibration data.</p>}
+          {info.notes.map(n => (
+            <p key={n} style={{ margin: 0, padding: '4px 12px 8px', ...TYPE.caption, color: 'var(--label-3)' }}>{n}</p>
+          ))}
+        </Card>
+      )}
+    </>
   );
 }
 
@@ -85,7 +146,9 @@ export function PcmScreen(): React.ReactElement {
         />
       )}
 
-      <SectionHeader>Powertrain control module</SectionHeader>
+      <VehicleInfoSection isConnected={isConnected} />
+
+      <SectionHeader>GM powertrain control module (Mode 3C)</SectionHeader>
 
       <Card>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>

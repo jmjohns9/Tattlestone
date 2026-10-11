@@ -8,11 +8,12 @@ Started as a targeted tool for chasing a parasitic battery drain on a **2004 Che
 
 ## Core capabilities
 
-- **Live telemetry** — sequential PID polling loop with three priority tiers (fast every cycle, normal every 3rd, slow every 10th). 34-PID catalog with SAE J1979 decode formulas.
+- **Live telemetry** — sequential PID polling loop with three priority tiers (fast every cycle, normal every 3rd, slow every 10th). 87-PID catalog with SAE J1979 decode formulas; the 53 extended PIDs are polled round-robin on slow cycles, only when discovery confirms support.
 - **Fault codes** — DTC scan of stored, pending and permanent codes (Mode 03/07/0A), a 371-entry curated code catalog with 9,533 OBDex generic codes as the fallback, live-snapshot capture when a code is first read, optional CarsXE lookup. **No clearing** — see Safety.
 - **Recalls & bulletins** — NHTSA recalls, manufacturer bulletins and owner complaints by year/make/model, cross-referenced against the vehicle's codes. VIN decoding is offline first (corgi + bundled vPIC).
 - **Vehicle health** — battery state, check-engine lamp, and I/M readiness decoded from PID 0101.
 - **Parasitic draw suite** — battery drain rate measured over time, voltage timeline, interactive fuse map, step-by-step isolation checklist. The Module monitor lists platform modules but has no wake detection yet.
+- **ECU information** — Mode 09 calibration IDs, CVNs and ECU names on any vehicle (PCM identity screen). ECU refusals are logged with ISO 14229 NRC names.
 - **GM-specific** — read-only PCM identity over J1850 VPW Mode 3C (VIN, HW/SW IDs, calibration blocks from P01/P59-family PCMs). Refused on non-VPW vehicles.
 - **EcuBus-Pro** — a clearly labelled **demo** of CAN/UDS/LIN/DoIP tooling. It shows sample data, offers read-only UDS services only, and sends nothing.
 - **Claude assistant** — in-app chat that receives a live session snapshot as context. Code questions are grounded in a `<reference-data>` block (catalog entry + NHTSA bulletins/complaints per code, built in `main/assistantGrounding.ts`); answers show a Reference line. Default model Claude Opus 5.5. API key encrypted via Electron `safeStorage`.
