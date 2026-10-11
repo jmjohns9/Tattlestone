@@ -6,6 +6,11 @@ import { EventEmitter } from 'events';
 // (Module wake behaviour, e.g. the IPC staying awake after engine-off, is not
 // simulated: the app has no module wake detection yet.)
 // Pre-loaded DTCs: B1982, P0300, U0100.
+// Mode 09 answers in J1850 frames: VIN, one calibration ID and its CVN.
+
+const SIM_VIN   = '1GCEK19T44E123456';   // valid check digit
+const SIM_CALID = '12592618';            // GM-style calibration ID
+const SIM_CVN   = [0x4F, 0x1A, 0x9C, 0x22];
 
 export class ELM327Simulator extends EventEmitter {
   private sessionStartMs = Date.now();
@@ -71,6 +76,9 @@ export class ELM327Simulator extends EventEmitter {
     // Mode 0A (permanent) — none
     if (cmd === '0A') return '4A0000\r\r>';
 
+    const info = this.mode09(cmd);
+    if (info) return info;
+
 
     const fn = this.pidReplies()[cmd];
     if (fn) {
@@ -79,6 +87,26 @@ export class ELM327Simulator extends EventEmitter {
     }
 
     return 'NO DATA\r\r>';
+  }
+
+  // Mode 09 in J1850 form: 49 <type> <seq> + 4 bytes per frame
+  private mode09(cmd: string): string | null {
+    const frames = (type: number, bytes: number[]) => {
+      const out: string[] = [];
+      for (let i = 0; i < bytes.length; i += 4) {
+        out.push(['49', this.hex1(type), this.hex1(i / 4 + 1), ...bytes.slice(i, i + 4).map(b => this.hex1(b))].join(''));
+      }
+      return `${out.join('\r')}\r\r>`;
+    };
+    const text = (s: string, width: number) => Array.from({ length: width }, (_, i) => s.charCodeAt(i) || 0);
+    switch (cmd) {
+      // 02 VIN, 04 calibration ID, 06 CVN
+      case '0900': return `49000154000000\r\r>`;
+      case '0902': return frames(0x02, [0, 0, 0, ...text(SIM_VIN, 17)]);
+      case '0904': return frames(0x04, text(SIM_CALID, 16));
+      case '0906': return frames(0x06, SIM_CVN);
+      default: return null;
+    }
   }
 
   // 0100, 0120 … 01E0: bit n set when PID base+n+1 is answered; the last bit
@@ -129,6 +157,12 @@ export class ELM327Simulator extends EventEmitter {
       // O2, O2 heater and EGR supported, EVAP not yet complete
       '0101': () => `41018207E504\r\r>`,
       '01A4': () => `41A402000000\r\r>`,     // gear supported, 0 = not in a forward gear (parked)
+      // Extended PIDs a 2004 J1850 truck answers
+      '011C': () => `411C01\r\r>`,         // OBD-II (CARB)
+      '011F': () => `411F${this.encode2(Math.round((Date.now() - this.sessionStartMs) / 1000))}\r\r>`,
+      '0121': () => `4121${this.encode2(412)}\r\r>`,   // km with the MIL on
+      '0130': () => `413026\r\r>`,         // 38 warm-ups since codes cleared
+      '0131': () => `4131${this.encode2(642)}\r\r>`,   // km since codes cleared
     };
   }
 

@@ -29,7 +29,7 @@ files/src/
 │   │                             #   late-reply handling, read-only write-service guard
 │   ├── obdParsers.ts             # All reply parsing: messages, ISO-TP, DTCs, VIN, PIDs
 │   ├── obdProtocolManager.ts     # Poll loop, PID discovery, DTC scan, exclusive() bus lock
-│   ├── pidCatalog.ts             # 34 PIDs with J1979 decode/format and warn/crit limits
+│   ├── pidCatalog.ts             # 87 PIDs with J1979 decode/format and warn/crit limits; tiers incl. EXTENDED
 │   ├── dtcCatalog.generated.ts   # 371 codes — hand-curated despite the name
 │   ├── dtcGeneric.generated.ts   # 9,533 OBDex generic codes (npm run gen:obdex), CC0
 │   ├── dtcLookup.ts              # Curated catalog first, then OBDex
@@ -44,6 +44,7 @@ files/src/
 │   ├── storageService.ts         # JSON (atomic, cached) + SQLite backends, migration
 │   ├── claudeAssistant.ts        # Anthropic SDK bridge, safeStorage key encryption
 │   ├── appearance.ts             # Saved System / Light / Dark override
+│   ├── assistantGrounding.ts     # Reference block for the assistant: catalog + NHTSA per code
 │   ├── nhtsa.ts                  # NHTSA recalls, bulletins, complaints (30-min cache)
 │   └── vinDecoder.ts             # Offline (corgi + vPIC db in userData) + online vPIC
 │

@@ -4,7 +4,7 @@ import {
   ConnectionStatus, PIDReading, DTCCode, ModuleState,
   LogEntry, SessionMarker, FuseCircuit, ParasiticChecklistItem,
   CANFrame, UDSRequest, UDSResponse, CANSignal, LINFrame,
-  DoIPEntity, EcuBusScript, EcuBusSubTab,
+  DoIPEntity, EcuBusScript, EcuBusSubTab, GroundingSummary,
 } from '../../shared/types';
 import { resolvePlatform, PlatformProfile } from '../../core/platforms';
 
@@ -140,6 +140,7 @@ export interface ChatMessage {
   timestamp: number;
   model?: string;                                   // which model produced an assistant reply
   usage?: { input_tokens: number; output_tokens: number };
+  grounding?: GroundingSummary;                     // reference data the answer was grounded in
 }
 
 // ─── Vehicle profile ──────────────────────────────────────────────────────────

@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { responseMessages, parseDTCResponse, parseVIN, parsePIDData, parsePIDMessages } from './obdParsers';
+import {
+  responseMessages, parseDTCResponse, parseVIN, parsePIDData, parsePIDMessages,
+  negativeResponse, nrcName, describeRefusal, mode09Payloads, parseMode09Text, parseCVNs, parseMode09Support,
+} from './obdParsers';
 
 // Fixtures are ELM327 replies as the commander sees them: ATH0 (no headers),
 // ATS0 (no spaces) unless noted, lines separated by \r.
@@ -114,4 +117,55 @@ test('PID: wrong PID or no data gives null', () => {
   assert.equal(parsePIDData('010C', '410D00\r'), null);
   assert.equal(parsePIDData('010C', 'NO DATA\r'), null);
   assert.equal(parsePIDData('010C', '410C\r'), null);
+});
+
+// ── Negative responses ────────────────────────────────────────────────────────
+
+test('NRC: CAN refusal 7F <service> <code>', () => {
+  assert.deepEqual(negativeResponse('7F0112', 0x01), { service: 0x01, nrc: 0x12, name: 'Sub-function not supported' });
+  assert.equal(describeRefusal(negativeResponse('7F0922', 0x09)!), 'refused: Conditions not correct (NRC 0x22)');
+});
+
+test('NRC: GM Class 2 echoes the request, so the code is the last byte', () => {
+  assert.equal(negativeResponse('7F3C0812', 0x3C)?.nrc, 0x12);
+});
+
+test('NRC: refusals of other services and positive replies are ignored', () => {
+  assert.equal(negativeResponse('7F0311', 0x01), null);
+  assert.equal(negativeResponse('410C1AF8', 0x01), null);
+  assert.equal(negativeResponse('NO DATA', 0x01), null);
+});
+
+test('NRC: manufacturer and unknown ranges are named generically', () => {
+  assert.equal(nrcName(0x83), 'Engine is running');
+  assert.equal(nrcName(0xA0), 'Manufacturer-specific condition not correct');
+  assert.equal(nrcName(0xF5), 'Manufacturer-specific code');
+  assert.equal(nrcName(0x50), 'Unknown code');
+});
+
+// ── Mode 09 vehicle information ───────────────────────────────────────────────
+
+test('Mode 09: J1850 calibration ID over four frames, out of order', () => {
+  const raw = '49040232363138\r49040131323539\r49040300000000\r49040400000000';
+  assert.deepEqual(parseMode09Text(0x04, raw, 16), ['12592618']);
+});
+
+test('Mode 09: J1850 sequences restarting at 1 are separate ECUs', () => {
+  const raw = '4906014F1A9C22\r49060100C0FFEE';
+  assert.deepEqual(mode09Payloads(0x06, raw).length, 2);
+  assert.deepEqual(parseCVNs(raw), ['4F1A9C22', '00C0FFEE']);
+});
+
+test('Mode 09: CAN reply carries an item count, then the items', () => {
+  // 2 calibration IDs in one ISO-TP message
+  const calids = '023\r0:49040231323334\r1:35363738000000\r2:00000000004142\r3:43440000000000\r4:00000000000000';
+  assert.deepEqual(parseMode09Text(0x04, calids, 16), ['12345678', 'ABCD']);
+  const name = '017\r0:490A0145434D00\r1:2D456E67696E65\r2:436F6E74726F6C\r3:00000000000000';
+  assert.deepEqual(parseMode09Text(0x0A, name, 20), ['ECM-EngineControl']);
+});
+
+test('Mode 09: supported info types from J1850 and CAN replies', () => {
+  assert.deepEqual([...parseMode09Support('49000154000000')!], [2, 4, 6]);
+  assert.deepEqual([...parseMode09Support('490055400000')!], [2, 4, 6, 8, 10]);
+  assert.equal(parseMode09Support('NO DATA'), null);
 });

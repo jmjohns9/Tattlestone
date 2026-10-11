@@ -3,6 +3,7 @@ import { useAppStore, ChatMessage, vehicleDisplayName } from '../store/appStore'
 import { Badge, Button, Divider, EmptyState } from '../components/layout/UIComponents';
 import { TYPE, WEIGHT, NUMERIC, RADIUS } from '../theme/theme';
 import { PID_MAP } from '../../core/pidCatalog';
+import type { GroundingSummary } from '../../shared/types';
 
 // ─── AssistantScreen — ask Claude about the live session ─────────────────────
 //
@@ -62,6 +63,7 @@ function buildContext(st: AppState) {
       vehicle.engine, vehicle.vin && `VIN ${vehicle.vin}`, vehicle.nickname,
       vehicle.notes && `Notes: ${vehicle.notes}`,
     ].filter(Boolean).join(' · '),
+    vehicleYmm: { year: vehicle.year.trim(), make: vehicle.make.trim(), model: vehicle.model.trim() },
     connectionStatus,
     protocol,
     liveData: Object.values(liveData).map(r => ({
@@ -81,6 +83,23 @@ function buildContext(st: AppState) {
     recentLogs: log.slice(0, 30).reverse().map(e =>
       `${new Date(e.timestamp).toLocaleTimeString()} ${e.level.toUpperCase()} ${e.message}`),
   };
+}
+
+const SOURCE_LABEL: Record<GroundingSummary['codes'][number]['source'], string> = {
+  gmt800: 'GMT800 catalog', obdex: 'OBDex', none: 'not in catalog',
+};
+
+/** Where the answer's code facts came from, so the user can tell lookup from memory. */
+function GroundingNote({ g }: { g: GroundingSummary }): React.ReactElement {
+  const parts = g.codes.map(c => `${c.code} · ${SOURCE_LABEL[c.source]}`);
+  if (g.bulletins) parts.push(`${g.bulletins} NHTSA bulletin${g.bulletins === 1 ? '' : 's'}`);
+  if (g.complaints) parts.push(`${g.complaints} owner complaint${g.complaints === 1 ? '' : 's'}`);
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8, ...TYPE.caption, color: 'var(--label-2)' }}>
+      <i className="ti ti-book" style={{ fontSize: 12 }} aria-hidden />
+      <span>{`Reference: ${parts.join(' · ')}`}</span>
+    </div>
+  );
 }
 
 // Only mounted while the preview is open, so only then does it follow live data
@@ -190,7 +209,7 @@ export function AssistantScreen(): React.ReactElement {
       if (resp.ok) {
         addChatMessage({
           role: 'assistant', content: resp.text, timestamp: Date.now(),
-          model: resp.model, usage: resp.usage,
+          model: resp.model, usage: resp.usage, grounding: resp.grounding,
         });
       } else if (resp.cancelled) {
         // Keep whatever streamed in before the user hit Cancel
@@ -578,6 +597,7 @@ export function AssistantScreen(): React.ReactElement {
                   </div>
                 )}
                 {m.content}
+                {m.grounding && <GroundingNote g={m.grounding} />}
                 {(m.role === 'assistant' || m.role === 'error') && (
                   <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                     <MsgAction icon="ti-copy" label="Copy" onClick={() => copy(m.content)} />

@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { PIDReading, DTCCode, ModuleState, ConnectionStatus, LogEntry, SessionSnapshot, DataRecording, FreezeFrame, StorageConfig, StorageInfo, ReportPayload, PcmReadResult, Appearance, VehicleSafetyReport } from '../shared/types';
+import { PIDReading, DTCCode, ModuleState, ConnectionStatus, LogEntry, SessionSnapshot, DataRecording, FreezeFrame, StorageConfig, StorageInfo, ReportPayload, PcmReadResult, Appearance, VehicleSafetyReport, VehicleInfoResult } from '../shared/types';
 
 // ─── Secure IPC Bridge (contextIsolation: true) ────────────────────────────────
 // All communication between the renderer (React) and main process
@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   scanDTCs:     ()                               => ipcRenderer.invoke('obd:scan-dtc'),
   checkModules: ()                               => ipcRenderer.invoke('obd:check-modules'),
   readPcmIds:   ()                               => ipcRenderer.invoke('pcm:read-ids') as Promise<PcmReadResult>,
+  readVehicleInfo: ()                            => ipcRenderer.invoke('obd:read-vehicle-info') as Promise<VehicleInfoResult>,
   exportLog:    (filename: string, text?: string) => ipcRenderer.invoke('session:export-log', { filename, text }),
   exportCSV:    (data: string, filename: string) => ipcRenderer.invoke('session:export-csv', { data, filename }),
   getAppearance: ()                  => ipcRenderer.invoke('app:get-appearance') as Promise<Appearance>,

@@ -407,6 +407,24 @@ export type PcmReadResult =
   | { ok: true; identity: PcmIdentity }
   | { ok: false; error: string };
 
+// ─── OBD-II vehicle information (Mode 09) ─────────────────────────────────────
+
+export interface VehicleInfo {
+  /** Software calibration IDs, one per calibration per ECU (info type 04). */
+  calibrationIds: string[];
+  /** Calibration verification numbers, checksums of the calibrations (info type 06). */
+  cvns: string[];
+  /** ECU names, e.g. 'ECM-EngineControl' (info type 0A, CAN vehicles). */
+  ecuNames: string[];
+  /** Info types the ECUs reported as supported, or null if they didn't say. */
+  supported: number[] | null;
+  /** Why an item is missing, e.g. a refusal or no answer. */
+  notes: string[];
+  readAt: number;
+}
+
+export type VehicleInfoResult = { ok: true; info: VehicleInfo } | { ok: false; error: string };
+
 // ─── Appearance ───────────────────────────────────────────────────────────────
 
 /** Window appearance override. 'system' follows macOS. */
@@ -453,6 +471,13 @@ export interface NhtsaComplaintSummary {
   /** Complaints that mention one of the requested codes, newest first. */
   mentioningCodes: NhtsaComplaint[];
   recent: NhtsaComplaint[];
+}
+
+/** What the assistant's answer was grounded in (see main/assistantGrounding.ts). */
+export interface GroundingSummary {
+  codes: Array<{ code: string; source: 'gmt800' | 'obdex' | 'none' }>;
+  bulletins: number;
+  complaints: number;
 }
 
 export type NhtsaSection<T> = { ok: true; data: T } | { ok: false; error: string };
