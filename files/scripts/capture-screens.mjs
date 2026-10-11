@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Launches the built app with Chrome DevTools Protocol enabled, clicks every
-// sidebar entry ([data-screen]) and saves light + dark PNGs of each screen.
+// sidebar entry ([data-screen]) and saves a PNG of each screen.
 // Native vibrancy is not captured (CDP renders web content only).
 // Usage: npm run build && node scripts/capture-screens.mjs <outDir> [--only live,health]
 import { spawn } from 'node:child_process';
@@ -65,15 +65,12 @@ try {
     returnByValue: true,
   })).result.value).filter(id => !only || only.includes(id));
 
-  for (const scheme of ['light', 'dark']) {
-    await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] });
-    for (const id of ids) {
-      await send('Runtime.evaluate', { expression: `document.querySelector('[data-screen="${id}"]').click()` });
-      await sleep(1200);
-      const { data } = await send('Page.captureScreenshot', { format: 'png' });
-      writeFileSync(path.join(outDir, `${id}-${scheme}.png`), Buffer.from(data, 'base64'));
-      console.log(`saved ${id}-${scheme}.png`);
-    }
+  for (const id of ids) {
+    await send('Runtime.evaluate', { expression: `document.querySelector('[data-screen="${id}"]').click()` });
+    await sleep(1200);
+    const { data } = await send('Page.captureScreenshot', { format: 'png' });
+    writeFileSync(path.join(outDir, `${id}.png`), Buffer.from(data, 'base64'));
+    console.log(`saved ${id}.png`);
   }
   ws.close();
 } finally {

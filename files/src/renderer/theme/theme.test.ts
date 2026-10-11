@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { LIGHT, DARK, DERIVED, buildThemeCSS, statusFor, STATUS_TEXT } from './theme';
+import { LIGHT, DERIVED, buildThemeCSS, statusFor, STATUS_TEXT } from './theme';
 
 function luminance(hex: string): number {
   const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
@@ -12,17 +12,11 @@ function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-test('light and dark palettes define the same tokens', () => {
-  assert.deepEqual(Object.keys(DARK).sort(), Object.keys(LIGHT).sort());
-});
-
 test('every *-text status token reaches 4.5:1 on grouped and content', () => {
-  for (const [name, p] of [['light', LIGHT], ['dark', DARK]] as const) {
-    for (const key of ['accent-text', 'ok-text', 'warn-text', 'crit-text'] as const) {
-      for (const bg of ['grouped', 'content'] as const) {
-        const ratio = contrast(p[key], p[bg]);
-        assert.ok(ratio >= 4.5, `${name} ${key} on ${bg} = ${ratio.toFixed(2)}`);
-      }
+  for (const key of ['accent-text', 'ok-text', 'warn-text', 'crit-text'] as const) {
+    for (const bg of ['grouped', 'content'] as const) {
+      const ratio = contrast(LIGHT[key], LIGHT[bg]);
+      assert.ok(ratio >= 4.5, `${key} on ${bg} = ${ratio.toFixed(2)}`);
     }
   }
 });
@@ -34,10 +28,10 @@ test('no legacy variable names remain', () => {
   }
 });
 
-test('theme CSS declares light defaults and a dark media override', () => {
+test('theme CSS is light only: no dark scheme, no dark override', () => {
   const css = buildThemeCSS();
-  assert.match(css, /:root \{[^}]*--label: rgba\(0,0,0,0\.85\);/);
-  assert.match(css, /@media \(prefers-color-scheme: dark\) \{ :root \{[^}]*--label: rgba\(255,255,255,0\.85\);/);
+  assert.match(css, /:root \{ color-scheme: light; [^}]*--label: rgba\(0,0,0,0\.85\);/);
+  assert.doesNotMatch(css, /dark/);
 });
 
 test('statusFor maps thresholds, crit before warn, in-range is neutral', () => {

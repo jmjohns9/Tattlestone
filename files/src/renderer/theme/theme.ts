@@ -1,6 +1,6 @@
 // ─── Tellstone — macOS-native design tokens ───────────────────
-// Apple system colours, SF type scale, 4pt spacing. Light/dark switch purely via
-// prefers-color-scheme; the main process drives it with nativeTheme.themeSource.
+// Apple system colours, SF type scale, 4pt spacing. Light appearance only; the
+// main process pins nativeTheme.themeSource to 'light' to match.
 
 import type { CSSProperties } from 'react';
 
@@ -45,35 +45,7 @@ export const LIGHT = {
   pink:          '#FF2D55',
 } as const;
 
-export const DARK: Record<keyof typeof LIGHT, string> = {
-  window:        '#1C1C1E',
-  content:       '#1C1C1E',
-  grouped:       '#2C2C2E',
-  elevated:      '#3A3A3C',
-  fill:          'rgba(118,118,128,0.24)',
-  'fill-strong': 'rgba(118,118,128,0.36)',
-  label:         'rgba(255,255,255,0.85)',
-  'label-2':     'rgba(255,255,255,0.55)',
-  'label-3':     'rgba(255,255,255,0.40)',
-  'label-4':     'rgba(255,255,255,0.10)',
-  separator:     'rgba(255,255,255,0.10)',
-  shadow:        'rgba(0,0,0,0.40)',
-  accent:        '#0A84FF',
-  'accent-text': '#409CFF',
-  'on-accent':   '#FFFFFF',
-  ok:            '#30D158',
-  'ok-text':     '#30D158',
-  warn:          '#FF9F0A',
-  'warn-text':   '#FF9F0A',
-  crit:          '#FF453A',
-  'crit-text':   '#FF6961',
-  teal:          '#40CBE0',
-  indigo:        '#5E5CE6',
-  purple:        '#BF5AF2',
-  pink:          '#FF375F',
-};
-
-/** Tints derived from the active palette — resolve per appearance automatically. */
+/** Tints derived from the palette. */
 export const DERIVED: Readonly<Record<string, string>> = {
   'accent-tint': 'color-mix(in srgb, var(--accent) 16%, transparent)',
   'ok-tint':     'color-mix(in srgb, var(--ok) 16%, transparent)',
@@ -87,8 +59,7 @@ const declare = (vars: Readonly<Record<string, string>>): string =>
 
 export function buildThemeCSS(): string {
   return [
-    `:root { color-scheme: light dark; ${declare(LIGHT)} ${declare(DERIVED)} }`,
-    `@media (prefers-color-scheme: dark) { :root { ${declare(DARK)} } }`,
+    `:root { color-scheme: light; ${declare(LIGHT)} ${declare(DERIVED)} }`,
   ].join('\n');
 }
 

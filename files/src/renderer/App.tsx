@@ -4,7 +4,7 @@ import { FONTS, TYPE } from './theme/theme';
 import { Sidebar } from './components/shell/Sidebar';
 import { Toolbar } from './components/shell/Toolbar';
 import { shortcutFor, readSidebarPref, writeSidebarPref } from './components/shell/shellLogic';
-import { PIDReading, DTCCode, ModuleState, LogEntry, SessionSnapshot, DataRecording, FreezeFrame, StorageConfig, StorageInfo, ReportPayload, PcmReadResult, Appearance, VehicleSafetyReport, GroundingSummary, VehicleInfoResult } from '../shared/types';
+import { PIDReading, DTCCode, ModuleState, LogEntry, SessionSnapshot, DataRecording, FreezeFrame, StorageConfig, StorageInfo, ReportPayload, PcmReadResult, VehicleSafetyReport, GroundingSummary, VehicleInfoResult } from '../shared/types';
 
 // Screens
 import { ConnectionScreen }   from './screens/ConnectionScreen';
@@ -43,8 +43,6 @@ declare global {
       onPcmProgress: (cb: (p: { done: number; total: number }) => void) => () => void;
       exportLog: (filename: string, text?: string) => Promise<void>;
       exportCSV: (data: string, filename: string) => Promise<void>;
-      getAppearance: () => Promise<Appearance>;
-      setAppearance: (a: Appearance) => Promise<Appearance>;
       onPIDReading: (cb: (r: PIDReading) => void) => () => void;
       onDTCResult: (cb: (d: DTCCode[]) => void) => () => void;
       onModuleState: (cb: (m: ModuleState) => void) => () => void;

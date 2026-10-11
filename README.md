@@ -47,9 +47,7 @@ A built-in ELM327 simulator lets the whole app run offline, so you don't need a 
 
 The whole interface was redesigned to look and behave like a native macOS app, in the style of Xcode, Instruments and Activity Monitor. It replaces the earlier dark "McLaren" theme. The design is in [`docs/superpowers/specs/2026-09-26-macos-redesign-design.md`](docs/superpowers/specs/2026-09-26-macos-redesign-design.md).
 
-- **Light, dark and System appearance.**
-  - Choose it under **Settings → Appearance → Theme**. The app follows macOS by default.
-  - The choice is saved in the app's `userData/appearance.json` and applied before the window appears, so there's no flash of the wrong theme on launch.
+- **Light appearance.** The app is always light, even when macOS is in dark mode.
 - **New app shell.**
   - A 220px translucent sidebar groups the screens into Overview, Subsystems, Diagnostic, Advanced and Records, with Settings pinned at the bottom.
   - A toolbar shows the vehicle, adapter and protocol, battery voltage, the active fault-code count and the session timer.
@@ -60,7 +58,7 @@ The whole interface was redesigned to look and behave like a native macOS app, i
   - They live in `components/ui/`.
 - **All 19 screens were restyled.** Their controls and data are unchanged.
 - **Accessible colour.**
-  - Status text uses dedicated colours that meet WCAG 4.5:1 contrast in both appearances.
+  - Status text uses dedicated colours that meet WCAG 4.5:1 contrast.
   - Normal readings are shown in neutral colours. Orange and red are reserved for warnings and critical values, so problems stand out.
 - **Native typography.**
   - SF Pro for text; SF Mono with tabular figures only for numbers, VINs, hex and PIDs.
@@ -90,7 +88,7 @@ Bugs found during the redesign but not yet fixed are listed under [Known issues]
 
 ## Screenshots
 
-All screenshots were captured from the built-in simulator in light mode, so you don't need a vehicle or adapter to see them. The app also has a full dark appearance.
+All screenshots were captured from the built-in simulator, so you don't need a vehicle or adapter to see them.
 
 | | |
 |---|---|
@@ -102,7 +100,7 @@ All screenshots were captured from the built-in simulator in light mode, so you 
 | **Connection:** vehicle profile, adapter and protocol status, and Bluetooth signal details, with connect and disconnect here or in the toolbar | ![Connection screen](docs/screenshots/connect.png) |
 | **Engine & fuel:** engine performance gauges, thermal readings, air and fuel delivery, and short- and long-term fuel trim per bank | ![Engine and fuel screen](docs/screenshots/engine.png) |
 | **EcuBus-Pro:** tabs for CAN monitor, UDS client, transmit, signals, scripting, LIN and DoIP (currently demo data; see [Known issues](#known-issues)) | ![EcuBus-Pro screen](docs/screenshots/ecubus.png) |
-| **Settings:** System / Light / Dark appearance, storage backend (local JSON or SQLite), and app info | ![Settings screen](docs/screenshots/settings.png) |
+| **Settings:** storage backend (local JSON or SQLite) and app info | ![Settings screen](docs/screenshots/settings.png) |
 
 ---
 
@@ -182,11 +180,11 @@ There are 20 screens. The sidebar groups them like this:
 The full reference is [`docs/ui-styling.md`](docs/ui-styling.md). In short:
 
 - **Tokens.** Colours, type, spacing, radii and motion are defined in `renderer/theme/theme.ts`.
-  - `buildThemeCSS()` turns them into CSS custom properties under `prefers-color-scheme`.
-  - The main process sets `nativeTheme.themeSource` from the saved appearance, so light and dark switch natively, including the window's vibrancy.
+  - `buildThemeCSS()` turns them into CSS custom properties.
+  - The app is light only: the main process pins `nativeTheme.themeSource` to `light`, so the window's vibrancy and native controls stay light in macOS dark mode.
 - **Components.** Screens are built from `components/layout/UIComponents.tsx`, which re-exports `components/ui/*`.
 - **Screen styling rules.** Screens never set their own colours, font families, letter-spacing, text-transform or borders. `npm run lint:styles <files>` enforces this.
-- **Screenshots.** `npm run build && node scripts/capture-screens.mjs <dir>` writes a light and a dark PNG of every screen, using a throwaway profile so your real app data is never touched.
+- **Screenshots.** `npm run build && node scripts/capture-screens.mjs <dir>` writes a PNG of every screen, using a throwaway profile so your real app data is never touched.
 
 ---
 
@@ -212,7 +210,7 @@ The full reference is [`docs/ui-styling.md`](docs/ui-styling.md). In short:
 │      │                                                              │
 │   ELM327Commander ── AT command engine, timeouts, response framing  │
 │                                                                     │
-│   appearance · storageService · claudeAssistant · pcmDiagnostics    │
+│   storageService · claudeAssistant · pcmDiagnostics                 │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -248,7 +246,6 @@ ATRV     Live battery voltage
 │   │   ├── main/                      # Electron main process
 │   │   │   ├── main.ts                #   window, IPC handlers, connection sessions, simulator
 │   │   │   ├── preload.ts             #   contextBridge API surface
-│   │   │   ├── appearance.ts          #   saved System/Light/Dark override
 │   │   │   ├── storageService.ts      #   JSON + SQLite backends, migration
 │   │   │   ├── claudeAssistant.ts     #   Claude API bridge, encrypted key store
 │   │   │   ├── assistantGrounding.ts  #   reference data for the assistant's code answers
@@ -278,7 +275,7 @@ ATRV     Live battery voltage
 │   │   ├── gen-dtc-catalog.ts         # DTC catalog generator
 │   │   ├── make-icon.mjs              # placeholder app icon → build/icon.icns
 │   │   ├── check-styles.mjs           # screen style linter (npm run lint:styles)
-│   │   └── capture-screens.mjs        # light/dark screenshot harness
+│   │   └── capture-screens.mjs        # screenshot harness
 │   ├── docker/                        # Dockerfile + Xvfb/noVNC entrypoint
 │   └── assets/report.html             # PDF report template
 ├── docs/
@@ -394,8 +391,7 @@ The suites sit next to the code they test:
 |---|---|
 | `src/core/elm327Commander.test.ts` | Closing the ELM327 commander mid-initialize or mid-command, and sending after close |
 | `src/core/obdProtocolManager.test.ts` | Polling staying stopped when stopped during a DTC scan or VIN read |
-| `src/main/appearance.test.ts` | Parsing, loading and saving the appearance override |
-| `src/renderer/theme/theme.test.ts` | Light/dark palettes, contrast of the status text colours, generated CSS |
+| `src/renderer/theme/theme.test.ts` | Contrast of the status text colours, and the light-only generated CSS |
 | `src/renderer/components/ui/*.test.ts` | Gauge geometry, status logic, component barrel exports |
 | `src/renderer/components/shell/shellLogic.test.ts` | Toolbar battery status and connection tone |
 | `scripts/check-styles.test.mjs` | The screen style linter |
@@ -405,7 +401,7 @@ The suites sit next to the code they test:
 | `src/main/vinDecoder.test.ts` | Merging offline and online VIN results; offline decoding runs under `npm run test:electron` |
 | `src/renderer/logic/safety.test.ts` | Bulletin search and the reported-code filter |
 
-For visual checks, run `npm run build && node scripts/capture-screens.mjs .screens/current`, which captures every screen in light and dark.
+For visual checks, run `npm run build && node scripts/capture-screens.mjs .screens/current`, which captures every screen.
 
 ---
 
