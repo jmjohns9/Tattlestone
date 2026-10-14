@@ -1,4 +1,5 @@
-"""Render the macOS app icon: a Basalt tile holding a Paper stone and a Signal streak.
+"""Render the macOS app icon: a Limestone tile holding a Basalt stone with the
+T monogram cut out of it and the Signal "tell" dot (the first-direction mark).
 
 Run:  python build_icon.py      (needs Pillow)
 Writes files/build/icon-1024.png and files/build/icon.icns.
@@ -7,21 +8,23 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter
 
-INK = (22, 23, 26, 255)
-SIGNAL = (232, 89, 12, 255)
-PAPER = (245, 243, 238, 255)
+INK = (28, 29, 31, 255)          # Basalt
+SIGNAL = (232, 89, 12, 255)      # Signal
+TILE = (233, 230, 224, 255)      # Limestone
 
-# Same geometry as the mark (viewBox 0 0 120 100) and the streak the wordmark
-# script aligns to the tt crossbar.
+# Same geometry as the brand board's mark (viewBox 0 0 120 100).
 STONE = [(12, 12), (108, 12), (92, 88), (28, 88)]
 STROKE = 16
-STREAK = (26, 28.93, 58, 12.02)  # x, y, w, h
+T_BAR = (30, 29, 60, 11)         # x, y, w, h — cut in the tile colour
+T_STEM = (54.5, 29, 11, 48)
+T_RADIUS = 2
+DOT = (81, 58, 7)                 # cx, cy, r
 
 SS = 4            # supersampling factor
 SIZE = 1024
 BODY = 824        # Apple's macOS icon grid: 824 px tile, 100 px margin
 RADIUS = 185
-STONE_W = 470     # drawn stone width on the 1024 canvas
+STONE_W = 500     # drawn stone width on the 1024 canvas
 
 BUILD = Path(__file__).parent.parent / "files" / "build"
 
@@ -38,22 +41,27 @@ def render() -> Image.Image:
     img.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(14 * SS)))
 
     d = ImageDraw.Draw(img)
-    d.rounded_rectangle((off, off, off + BODY * SS, off + BODY * SS), RADIUS * SS, fill=INK)
+    d.rounded_rectangle((off, off, off + BODY * SS, off + BODY * SS), RADIUS * SS, fill=TILE)
 
     # Stone: drawn box is 4..116 x 4..96 in mark units; centre it on the tile.
     k = STONE_W * SS / 112
     ox = n / 2 - 60 * k
     oy = n / 2 - 50 * k
     pts = [(ox + x * k, oy + y * k) for x, y in STONE]
-    d.polygon(pts, fill=PAPER)
+    d.polygon(pts, fill=INK)
     r = STROKE / 2 * k
     for a, b in zip(pts, pts[1:] + pts[:1]):
-        d.line([a, b], fill=PAPER, width=round(STROKE * k))
+        d.line([a, b], fill=INK, width=round(STROKE * k))
     for x, y in pts:  # round joins
-        d.ellipse((x - r, y - r, x + r, y + r), fill=PAPER)
+        d.ellipse((x - r, y - r, x + r, y + r), fill=INK)
 
-    sx, sy, sw, sh = STREAK
-    d.rounded_rectangle((ox + sx * k, oy + sy * k, ox + (sx + sw) * k, oy + (sy + sh) * k), sh / 2 * k, fill=SIGNAL)
+    def box(x, y, w, h):
+        return (ox + x * k, oy + y * k, ox + (x + w) * k, oy + (y + h) * k)
+
+    d.rounded_rectangle(box(*T_BAR), T_RADIUS * k, fill=TILE)
+    d.rounded_rectangle(box(*T_STEM), T_RADIUS * k, fill=TILE)
+    cx, cy, cr = DOT
+    d.ellipse(box(cx - cr, cy - cr, 2 * cr, 2 * cr), fill=SIGNAL)
     return img.resize((SIZE, SIZE), Image.LANCZOS)
 
 
