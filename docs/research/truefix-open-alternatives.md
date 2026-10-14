@@ -78,7 +78,7 @@ Researched 2026-10-10. GitHub stats were read from the GitHub API on that date.
 | Source | License / terms | Format | Updated | Adoption | Coverage | Notes |
 |---|---|---|---|---|---|---|
 | None open | — | — | — | — | — | No open dataset exists. Only OEM service information and charm.li (❌) have it. |
-| Tellstone's own `PlatformProfile` | Yours | TypeScript | — | — | gmt800 | ✅ The fuse panel maps already work this way, so the pattern can be extended to component locations. |
+| Tattlestone's own `PlatformProfile` | Yours | TypeScript | — | — | gmt800 | ✅ The fuse panel maps already work this way, so the pattern can be extended to component locations. |
 
 ### 8. Special service tools
 | Source | License / terms | Format | Updated | Adoption | Coverage | Notes |
@@ -90,7 +90,7 @@ Researched 2026-10-10. GitHub stats were read from the GitHub API on that date.
 |---|---|---|---|---|---|---|
 | [NHTSA vPIC API](https://vpic.nhtsa.dot.gov/api/) | Public domain; rate-limited | REST, JSON | Live | Industry standard | US-market vehicles, 1981+ | ✅ **Already used** in `main.ts` (`obd:decode-vin`). |
 | [vPIC standalone database](https://vpic.nhtsa.dot.gov/downloads) | Public domain | MS SQL `.bak` (174 MB) and PostgreSQL 17 dump; monthly | 2026-03 | — | Same as the API | ✅ Offline VIN decoding with no rate limits. |
-| [cardog-ai/corgi](https://github.com/cardog-ai/corgi) | ISC | TypeScript, built on vPIC | 2026-04 | 332★ | Same as vPIC | ✅ **Fits Tellstone's stack**: offline VIN decoding in Node. |
+| [cardog-ai/corgi](https://github.com/cardog-ai/corgi) | ISC | TypeScript, built on vPIC | 2026-04 | 332★ | Same as vPIC | ✅ **Fits Tattlestone's stack**: offline VIN decoding in Node. |
 | [davidpeckham/vpic-api](https://github.com/davidpeckham/vpic-api) | MIT | Python client | 2024-01 | 10★ | Same as vPIC | ✅ Python option. |
 | [EPA fueleconomy.gov](https://fueleconomy.gov/feg/ws) | Public (US government) | CSV, XML, REST | Yearly | Widely used | 1984+ | ✅ Engine size, cylinder count, transmission and drive type, to fill in engine data vPIC lacks. |
 | [abhionlyone/us-car-models-data](https://github.com/abhionlyone/us-car-models-data) | No SPDX license | CSV | 2025-11 | 530★ | US YMM | ⚠️ Check the license before shipping it. |
@@ -153,7 +153,7 @@ Researched 2026-10-10. GitHub stats were read from the GitHub API on that date.
 
 ---
 
-## 6. Feature candidates for Tellstone
+## 6. Feature candidates for Tattlestone
 
 Ranked by value against effort. All of them keep the app read-only (see `readOnly.test.ts`).
 
@@ -169,4 +169,4 @@ Ranked by value against effort. All of them keep the app read-only (see `readOnl
 | H | **Real passive CAN monitor on the EcuBus screen** | opendbc (MIT) + ELM327 `ATMA` | L | Listen-only, so it's still read-only. Replaces the demo data. Note that `ATMA` isn't in the AT/ST pass-through; review it. |
 | I | **External reference links** | charm.li deep link by year, make and model; OEM owner portal | XS | Link out only. Don't ingest or redistribute the content. |
 
-Python projects ([python-OBD](https://github.com/brendan-w/python-OBD), GPL-2.0, 1.3k★; `elm327_obdii`; `vpic-api`) are useful for prototyping, but Tellstone is TypeScript and Electron. Prefer the data files (JSON, CSV or SQL), and use corgi for VIN decoding.
+Python projects ([python-OBD](https://github.com/brendan-w/python-OBD), GPL-2.0, 1.3k★; `elm327_obdii`; `vpic-api`) are useful for prototyping, but Tattlestone is TypeScript and Electron. Prefer the data files (JSON, CSV or SQL), and use corgi for VIN decoding.

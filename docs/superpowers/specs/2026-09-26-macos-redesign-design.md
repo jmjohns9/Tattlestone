@@ -6,7 +6,7 @@
 
 ## Goal
 
-Make Tellstone look and feel like a first-party macOS pro app (reference points: Xcode, Instruments, Activity Monitor). Today the UI reads as a terminal: all-caps letter-spaced labels, monospace everywhere, 0 radius, 2px borders, GitHub-dark palette, a cramped 84px icon rail, and small gauges with ~6px text.
+Make Tattlestone look and feel like a first-party macOS pro app (reference points: Xcode, Instruments, Activity Monitor). Today the UI reads as a terminal: all-caps letter-spaced labels, monospace everywhere, 0 radius, 2px borders, GitHub-dark palette, a cramped 84px icon rail, and small gauges with ~6px text.
 
 ## Decisions
 
@@ -77,7 +77,7 @@ Semantic tokens, each with light and dark values based on Apple system colors:
 - Right: connection item (status dot, adapter, protocol; click opens a popover with read rate, live PID count, and Disconnect), battery voltage (status-coloured), CEL count (click navigates to DTC), session timer.
 - Interactive elements inside the toolbar use `-webkit-app-region: no-drag`.
 - The theme toggle moves to Settings.
-- Remove per-screen duplicate titles (e.g. "TELLSTONE — LIVE TELEMETRY") and the screen tab strip.
+- Remove per-screen duplicate titles (e.g. "TATTLESTONE — LIVE TELEMETRY") and the screen tab strip.
 
 ### Bottom status bar
 - Removed; its PROTO / PIDs / RATE fields move into the connection popover.

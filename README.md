@@ -1,8 +1,8 @@
-# Tellstone
+# Tattlestone
 
 **An OBD-II diagnostic suite for the Mac. It reads live telemetry and fault codes, analyses parasitic battery drain, and includes a Claude-powered diagnostic assistant.**
 
-![Tellstone in light mode: the Vehicle health screen](docs/screenshots/health.png)
+![Tattlestone in light mode: the Vehicle health screen](docs/screenshots/health.png)
 
 The app is built with Electron, React and TypeScript, and talks to an ELM327-class adapter over Bluetooth or USB serial. It started as a tool for chasing a parasitic battery drain on a 2004 Chevrolet Silverado 1500 Z71 (GM GMT800, J1850 VPW), and has since been generalized. The protocol layer works with any OBD-II vehicle. Platform-specific reference data (module maps, fuse panels, draw checklists) comes from a registry.
 
@@ -39,7 +39,7 @@ A built-in ELM327 simulator lets the whole app run offline, so you don't need a 
 
 - **Recalls & bulletins screen (new).** Looks up the vehicle's safety recalls, manufacturer bulletins (TSBs, GM PIs, special coverage) and owner complaints from NHTSA. Bulletins and complaints that cite a code the vehicle reported are flagged, and each bulletin's PDF opens from NHTSA. Free public-domain data, no API key.
 - **More live data and ECU identity.** 53 more standard PIDs (87 in all), including distance, time and warm-ups since codes were cleared, which shows when codes were cleared before a sale. Mode 09 calibration IDs and CVNs on the PCM identity screen work on any vehicle, and ECU refusals are logged with their ISO 14229 reason.
-- **Grounded assistant answers.** The Claude assistant answers code questions from Tellstone's catalogs and NHTSA bulletins, not from memory, and shows which sources it used.
+- **Grounded assistant answers.** The Claude assistant answers code questions from Tattlestone's catalogs and NHTSA bulletins, not from memory, and shows which sources it used.
 - **9,500+ generic fault codes.** Codes missing from the curated GMT800 catalog now fall back to [OBDex](https://github.com/foerbsnavi/OBDex) (CC0): description, likely causes ranked by likelihood, symptoms and repair effort.
 - **Offline VIN decoding.** VINs decode against a bundled copy of NHTSA's vPIC database ([corgi](https://github.com/cardog-ai/corgi)), so it works with no network. When online, the vPIC API fills in trim and transmission.
 
@@ -148,7 +148,7 @@ All screenshots were captured from the built-in simulator, so you don't need a v
 
 **Claude assistant**
 - An in-app chat that receives a snapshot of the live session as context: current PIDs, active DTCs and the recent log.
-- Answers about fault codes are grounded in Tellstone's own data. For the vehicle's codes and any code typed in the question, it sends the catalog entry (GMT800 or OBDex) and the NHTSA bulletins and complaints that cite it. Claude names the source, says when a code isn't in the catalogs, and is warned when a GM meaning is applied to another make. Each answer shows a "Reference" line listing what it used.
+- Answers about fault codes are grounded in Tattlestone's own data. For the vehicle's codes and any code typed in the question, it sends the catalog entry (GMT800 or OBDex) and the NHTSA bulletins and complaints that cite it. Claude names the source, says when a code isn't in the catalogs, and is warned when a GM meaning is applied to another make. Each answer shows a "Reference" line listing what it used.
 - Selectable model, streaming responses, and chat export to Markdown.
 - The API key is stored in the app's `userData` directory and encrypted at rest through the OS keychain (Electron `safeStorage`).
 
@@ -304,8 +304,8 @@ ATRV     Live battery voltage
 ### Install and run
 
 ```bash
-git clone git@github.com:jmjohns9/Tellstone.git
-cd Tellstone/files
+git clone git@github.com:jmjohns9/Tattlestone.git
+cd Tattlestone/files
 npm install      # postinstall rebuilds better-sqlite3 and serialport for Electron
 npm run dev
 ```

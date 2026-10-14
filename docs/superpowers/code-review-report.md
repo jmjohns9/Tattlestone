@@ -1,4 +1,4 @@
-# Code review report: Tellstone
+# Code review report: Tattlestone
 
 - **Date:** 2026-09-28
 - **Branch:** `review/code-review` (from `main` at 58b830b)
