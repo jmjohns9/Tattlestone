@@ -1,4 +1,4 @@
-// ─── Tellstone — macOS-native design tokens ───────────────────
+// ─── Tattlestone — macOS-native design tokens ───────────────────
 // Apple system colours, SF type scale, 4pt spacing. Light appearance only; the
 // main process pins nativeTheme.themeSource to 'light' to match.
 
