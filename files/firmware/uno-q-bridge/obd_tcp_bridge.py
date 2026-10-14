@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Tellstone Network Mode bridge for the Arduino UNO Q (Linux side).
+"""Tattlestone Network Mode bridge for the Arduino UNO Q (Linux side).
 
-Forwards bytes between one TCP client (the Tellstone app) and an OBD adapter
+Forwards bytes between one TCP client (the Tattlestone app) and an OBD adapter
 on a serial device: the OBDLink MX bound over Bluetooth (/dev/rfcomm0) or a
 USB STN1110/ELM327 (/dev/ttyUSB0, /dev/ttyACM0).
 

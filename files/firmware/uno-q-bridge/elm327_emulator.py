@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tellstone ELM327 emulator for the Arduino UNO Q (Linux side).
+"""Tattlestone ELM327 emulator for the Arduino UNO Q (Linux side).
 
 Answers the app's ELM327/OBD commands itself, no OBD adapter attached, so the
 Mac app can be driven end to end over Network Mode. Engine values are synthetic
