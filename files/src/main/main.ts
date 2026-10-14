@@ -15,6 +15,7 @@ import { StorageService } from './storageService';
 import { decodeVin } from './vinDecoder';
 import { fetchVehicleSafety, bulletinPdfUrl, validVehicle } from './nhtsa';
 import { buildGrounding, codesToGround } from './assistantGrounding';
+import { TcpPort, isTcpTarget } from './tcpPort';
 
 // SerialPort is a native module — use require() to avoid dynamic import issues in Electron
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -281,8 +282,11 @@ async function connectToPort(portPath: string, gen: number): Promise<void> {
   let port: any = null;
   let commander: ELM327Commander | null = null;
   try {
-    // OBDLink MX+ over Bluetooth SPP uses 115200 baud
-    port = new SerialPort({ path: portPath, baudRate: 115200, autoOpen: false });
+    // Network Mode: a Wi-Fi bridge at tcp://host:port. Otherwise OBDLink MX+
+    // over Bluetooth SPP, which uses 115200 baud.
+    port = isTcpTarget(portPath)
+      ? new TcpPort(portPath)
+      : new SerialPort({ path: portPath, baudRate: 115200, autoOpen: false });
     activePort = port;
 
     const fakeSend = (data: string): void => {
@@ -340,8 +344,8 @@ async function connectToPort(portPath: string, gen: number): Promise<void> {
 
     addLog({ timestamp: Date.now(), level: 'ok', message: `Connected — ${info.firmwareVersion} — Protocol: ${info.protocol} — Battery: ${info.voltage}` });
 
-    // Signal strength only exists for Bluetooth; USB adapters have none
-    if (!/usbserial|usbmodem|ttyUSB|ttyACM/i.test(portPath)) startRSSIPolling(gen);
+    // Signal strength only exists for Bluetooth; USB and network adapters have none
+    if (!isTcpTarget(portPath) && !/usbserial|usbmodem|ttyUSB|ttyACM/i.test(portPath)) startRSSIPolling(gen);
     startOBDManager(gen, commander);
   } catch (err) {
     commander?.close();
