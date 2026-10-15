@@ -80,7 +80,7 @@ function createWindow(): void {
       // The preload only requires 'electron', so it runs sandboxed
       sandbox: true,
     },
-    title: 'Tellstone',
+    title: 'Tattlestone',
   });
 
   mainWindow.once('ready-to-show', () => mainWindow?.show());
@@ -753,7 +753,7 @@ handle('storage:delete-freeze-frame', (_e: Electron.IpcMainInvokeEvent, { id }: 
 
 handle('report:generate', async (_event: Electron.IpcMainInvokeEvent, payload: unknown) => {
   const os = require('os') as typeof import('os');
-  const outDir = path.join(os.homedir(), 'Documents', 'Tellstone');
+  const outDir = path.join(os.homedir(), 'Documents', 'Tattlestone');
   await fs.promises.mkdir(outDir, { recursive: true });
 
   // Date and time, so a second report on the same day doesn't replace the first
@@ -803,8 +803,11 @@ handle('carsxe:decode', async (_event: Electron.IpcMainInvokeEvent, { code }: { 
 // App name — shown in the menu bar and as the Dock icon tooltip.
 // (In dev mode the Dock may still say "Electron" because the tooltip comes from
 //  the Electron binary's Info.plist; packaged builds use productName and show
-//  "Tellstone" correctly.)
-app.setName('Tellstone');
+//  "Tattlestone" correctly.)
+// The name also keys safeStorage's keychain item ("<name> Safe Storage"), so
+// an API key saved before the Tellstone → Tattlestone rename no longer
+// decrypts; readApiKey() treats that as no key and the user re-enters it.
+app.setName('Tattlestone');
 
 app.whenReady().then(() => {
   // Dock icon for dev mode (packaged builds get it from electron-builder's icon config)
