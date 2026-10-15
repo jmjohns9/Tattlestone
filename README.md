@@ -1,4 +1,9 @@
-# Tattlestone
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="brand/tattlestone-wordmark-reversed.svg">
+    <img alt="Tattlestone" src="brand/tattlestone-lockup.svg" width="440">
+  </picture>
+</h1>
 
 **An OBD-II diagnostic suite for the Mac. It reads live telemetry and fault codes, analyses parasitic battery drain, and includes a Claude-powered diagnostic assistant.**
 
@@ -179,6 +184,10 @@ There are 20 screens. The sidebar groups them like this:
 
 The full reference is [`docs/ui-styling.md`](docs/ui-styling.md). In short:
 
+- **Brand.** Three colours: Basalt `#16171A`, Signal `#E8590C` and Paper `#F5F3EE`, set as `BRAND` in `renderer/theme/theme.ts`.
+  - Signal orange appears only when the car is reporting something, such as a warning. Everything else is Basalt on Paper, and red is kept for critical states.
+  - The mark is a Basalt stone with a T cut out of it and a Signal dot. The app icon puts it on a Limestone tile.
+  - The wordmark and lockup SVGs live in `brand/`. `build_wordmark.py` regenerates them and `build_icon.py` regenerates `files/build/icon.icns`. The wordmark is set in Helvetica Neue Bold as a stand-in for Neue Haas Grotesk.
 - **Tokens.** Colours, type, spacing, radii and motion are defined in `renderer/theme/theme.ts`.
   - `buildThemeCSS()` turns them into CSS custom properties.
   - The app is light only: the main process pins `nativeTheme.themeSource` to `light`, so the window's vibrancy and native controls stay light in macOS dark mode.
@@ -278,6 +287,10 @@ ATRV     Live battery voltage
 │   │   └── capture-screens.mjs        # screenshot harness
 │   ├── docker/                        # Dockerfile + Xvfb/noVNC entrypoint
 │   └── assets/report.html             # PDF report template
+├── brand/                             # Wordmark, lockup and icon sources
+│   ├── tattlestone-*.svg              #   lockup, wordmark, reversed wordmark
+│   ├── build_wordmark.py              #   outlines the wordmark from a font
+│   └── build_icon.py                  #   renders files/build/icon-1024.png + icon.icns
 ├── docs/
 │   ├── ui-styling.md                  # Design system reference
 │   ├── screenshots/                   # README images
